@@ -26,6 +26,7 @@ namespace mymuduo
     public:
         typedef boost::function<void()> EventCallback;
 
+        Channel();
         Channel(EventLoop *loop, int fd);
 
         /*
@@ -75,4 +76,4 @@ namespace mymuduo
     };
 }
 
-#endif MY_CHANNEM_H // !MY_CHANNEM_H
+#endif // !MY_CHANNEM_H

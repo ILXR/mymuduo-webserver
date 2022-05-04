@@ -4,46 +4,46 @@
 #include <poll.h>
 #include <stdio.h>
 
-namespace mymuduo
+using namespace mymuduo;
+
+const int Channel::kNoneEvent = 0;
+const int Channel::kReadEvent = POLLIN | POLLPRI;
+const int Channel::kWriteEvent = POLLOUT;
+
+Channel::Channel(EventLoop *loop, int fdArg) : loop_(loop),
+                                               fd_(fdArg),
+                                               events_(0),
+                                               revents_(0),
+                                               index_(-1)
 {
+}
 
-    const int Channel::kNoneEvent = 0;
-    const int Channel::kReadEvent = POLLIN | POLLPRI;
-    const int Channel::kWriteEvent = POLLOUT;
+Channel::~Channel() {}
 
-    Channel::Channel(EventLoop *loop, int fdArg) : loop_(loop),
-                                                   fd_(fdArg),
-                                                   events_(0),
-                                                   revents_(0),
-                                                   index_(-1)
+void Channel::update()
+{
+    loop_->updateChannel(this);
+}
+
+void Channel::handleEvent()
+{
+    if (revents_ & POLLNVAL)
     {
+        printf("Channel::handle_event() POLLNVAL\n");
     }
-
-    void Channel::update()
+    if (revents_ & (POLLERR | POLLNVAL))
     {
-        loop_->updateChannel(this);
+        if (errorCallback_)
+            errorCallback_();
     }
-
-    void Channel::handleEvent()
+    if (revents_ & (POLLIN | POLLPRI | POLLHUP))
     {
-        if (revents_ & POLLNVAL)
-        {
-            printf("Channel::handle_event() POLLNVAL");
-        }
-        if (revents_ & (POLLERR | POLLNVAL))
-        {
-            if (errorCallback_)
-                errorCallback_();
-        }
-        if (revents_ & (POLLIN | POLLPRI | POLLHUP))
-        {
-            if (readCallback_)
-                readCallback_();
-        }
-        if (revents_ & POLLOUT)
-        {
-            if (writeCallback_)
-                writeCallback_();
-        }
+        if (readCallback_)
+            readCallback_();
+    }
+    if (revents_ & POLLOUT)
+    {
+        if (writeCallback_)
+            writeCallback_();
     }
 }

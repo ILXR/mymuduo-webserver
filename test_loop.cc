@@ -1,8 +1,8 @@
+/****************************** 测试 EventLoop ********************************/
 #include "EventLoop.h"
-#include "util.h"
-#include <unistd.h>
 #include <muduo/base/CurrentThread.h>
 #include <muduo/base/Thread.h>
+#include <unistd.h>
 
 /****************************** test 1 正常退出 ********************************/
 // void threadFunc()

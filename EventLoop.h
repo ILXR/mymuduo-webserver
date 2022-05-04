@@ -1,21 +1,41 @@
 #ifndef MY_EVENT_LOOP_H
 #define MY_EVENT_LOOP_H
 
+#include <functional>
 #include <pthread.h>
+#include <vector>
 #include <muduo/base/CurrentThread.h>
+#include <boost/scoped_ptr.hpp>
+#include <muduo/net/Callbacks.h>
+#include <muduo/base/Timestamp.h>
 #include "noncopyable.h"
-// #include "CurrentThread.h"
+#include "TimerId.h"
 
 namespace mymuduo
 {
 
     class Channel;
+    class Poller;
+    class TimerQueue;
+    using Timestamp = muduo::Timestamp;
+    using TimerCallback = muduo::net::TimerCallback;
     class EventLoop : noncopyable
     {
     private:
         void abortNotInLoopThread();
+
+        typedef std::function<void()> Functor;
+        typedef std::vector<Channel *> ChannelList;
+
         bool looping_;
+        bool quit_;
         const pid_t threadId_;
+        int kPollTimeMs_ = 1000; // poll阻塞时间，可以修改
+
+        // 注意EventLoop通过scoped_ptr来间接持有 Poller
+        boost::scoped_ptr<Poller> poller_;
+        ChannelList activeChannels_;
+        mymuduo::TimerQueue *timerQueue_;
 
     public:
         /*
@@ -31,8 +51,15 @@ namespace mymuduo
          * EventLoop对象 的生命期通常和其所属的线程一样长，它不必是heap对象
          **/
         void loop();
-
+        void quit() { quit_ = true; };
         void updateChannel(Channel *channel);
+
+        void runInLoop(Functor cb);
+        void cancel(TimerId timerId);
+        // Timer Event
+        TimerId runAt(const Timestamp &time, const TimerCallback &cb);
+        TimerId runAfter(double delay, const TimerCallback &cb);
+        TimerId runEvery(double interval, const TimerCallback &cb);
 
         /*
          * muduo的接口设计会明确哪些成员函数是线程安全的，可以跨线程调用；

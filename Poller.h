@@ -51,4 +51,4 @@ namespace mymuduo
     };
 }
 
-#endif
+#endif // !MY_POLLER_H
