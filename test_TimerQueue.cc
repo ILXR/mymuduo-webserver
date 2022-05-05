@@ -1,5 +1,5 @@
+#include "EventLoopThread.h"
 #include "EventLoop.h"
-#include <muduo/net/EventLoopThread.h>
 #include "TimerId.h"
 #include <muduo/base/Timestamp.h>
 #include <stdio.h>
@@ -56,12 +56,12 @@ int main()
     loop.loop();
     print("main loop exits");
   }
-  // sleep(1);
-  // {
-  //   muduo::net::EventLoopThread loopThread;
-  //   EventLoop *loop = loopThread.startLoop();
-  //   loop->runAfter(2, printTid);
-  //   sleep(3);
-  //   print("thread loop exits");
-  // }
+  sleep(1);
+  {
+    mymuduo::EventLoopThread loopThread;
+    EventLoop *loop = loopThread.startLoop();
+    loop->runAfter(2, printTid);
+    sleep(3);
+    print("thread loop exits");
+  }
 }

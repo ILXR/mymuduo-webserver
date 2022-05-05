@@ -29,7 +29,7 @@ namespace mymuduo
             int timerfd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
             if (timerfd < 0)
             {
-                perror("Failed in timerfd_create");
+                perror("Failed in timerfd_create\n");
             }
             return timerfd;
         }
@@ -59,7 +59,7 @@ namespace mymuduo
         {
             uint64_t howmany;
             ssize_t n = ::read(timerfd, &howmany, sizeof howmany);
-            printf("TimerQueue::handleRead() %ld at %s", howmany, now.toString().c_str());
+            printf("TimerQueue::handleRead() %ld at %s\n", howmany, now.toString().c_str());
             if (n != sizeof howmany)
             {
                 printf("TimerQueue::handleRead() reads %ld bytes instead of 8\n", n);
@@ -77,7 +77,7 @@ namespace mymuduo
             int ret = ::timerfd_settime(timerfd, 0, &newValue, &oldValue);
             if (ret)
             {
-                perror("timerfd_settime()");
+                perror("timerfd_settime()\n");
             }
         }
     }
