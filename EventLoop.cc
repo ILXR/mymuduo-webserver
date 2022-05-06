@@ -63,7 +63,7 @@ void EventLoop::loop()
         pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
         for (ChannelList::iterator it = activeChannels_.begin(); it != activeChannels_.end(); ++it)
         {
-            (*it)->handleEvent();
+            (*it)->handleEvent(pollReturnTime_);
         }
         doPendingFunctors();
     }
@@ -73,7 +73,7 @@ void EventLoop::loop()
 }
 
 /**
- * 检查断言之后调用 Poller::updateChannel()，EventLoop不关心Poller是如何管理Channel列表 的
+ * 检查断言之后调用 Poller::updateChannel()，EventLoop不关心Poller是如何管理Channel列表的
  */
 void EventLoop::updateChannel(Channel *channel)
 {
@@ -86,7 +86,8 @@ void EventLoop::updateChannel(Channel *channel)
  * 支持 unregister 功能
  * （因为 TcpConnection 不再自生自灭了，可以进行管理）
  */
-void EventLoop::removeChannel(Channel *channel){
+void EventLoop::removeChannel(Channel *channel)
+{
     poller_->removeChannel(channel);
 }
 

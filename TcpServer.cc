@@ -9,13 +9,23 @@
 
 using namespace mymuduo;
 
-TcpServer::TcpServer(EventLoop *loop, const InetAddress &listenAddr)
-    : loop_(loop)
+TcpServer::TcpServer(EventLoop *loop,
+                     const InetAddress &listenAddr,
+                     const string &nameArg)
+    : loop_(loop),
+      name_(nameArg),
+      acceptor_(new Acceptor(loop_, listenAddr)),
+      connectionCallback_(defaultConnectionCallback),
+      messageCallback_(defaultMessageCallback),
+      nextConnId_(1)
 {
+    acceptor_->setNewConnectionCallback(std::bind(&TcpServer::newConnection, this, _1, _2));
 }
 
 void TcpServer::start()
 {
+    assert(!acceptor_->listenning());
+    loop_->runInLoop(std::bind(&Acceptor::listen, get_pointer(acceptor_)));
     // if (started_.getAndSet(1) == 0)
     // {
     //     threadPool_->start(threadInitCallback_);
@@ -41,7 +51,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
 
     std::cout << "TcpServer::newConnection [" << name_
               << "] - new connection [" << connName
-              << "] from " << peerAddr.toIpPort();
+              << "] from " << peerAddr.toIpPort() << endl;
     InetAddress localAddr(mymuduo::sockets::getLocalAddr(sockfd));
     TcpConnectionPtr conn(new TcpConnection(loop_,
                                             connName,
@@ -64,7 +74,7 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
 void TcpServer::removeConnection(const TcpConnectionPtr &conn)
 {
     loop_->assertInLoopThread();
-    printf("TcpServer::removeConnection [%s] - connection %s", name_.c_str(), conn->name().c_str());
+    printf("TcpServer::removeConnection [%s] - connection %s\n", name_.c_str(), conn->name().c_str());
     size_t n = connections_.erase(conn->name());
     assert(n == 1);
     (void)n;

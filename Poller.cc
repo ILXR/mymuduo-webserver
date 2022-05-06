@@ -121,7 +121,7 @@ namespace mymuduo
             if (channel->isNoneEvent()) // events == 0
             {
                 // channel 中的fd永远是 >=0 ，但是pdf中的fd可正可负（负数时忽略此项）
-                pfd.fd = channel->fd() - 1;
+                pfd.fd = -channel->fd() - 1;
             }
         }
     }
@@ -129,7 +129,7 @@ namespace mymuduo
     void Poller::removeChannel(Channel *channel)
     {
         assertInLoopThread();
-        printf("fd = %d", channel->fd());
+        printf("Poller::removeChannel fd = %d\n", channel->fd());
         assert(channels_.find(channel->fd()) != channels_.end());
         assert(channels_[channel->fd()] == channel);
         assert(channel->isNoneEvent());

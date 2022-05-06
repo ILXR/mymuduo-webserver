@@ -3,16 +3,18 @@
 #include <functional>
 #include "Channel.h"
 #include "EventLoop.h"
+#include "Timestamp.h"
 
+using namespace mymuduo;
 mymuduo::EventLoop *g_loop;
 
-void timeout(int timerfd)
+void timeout(Timestamp receiveTime)
 {
     // 由于poll(2)是level trigger，在timeout()中应该read() timefd，否则下 次会立刻触发
-    printf("Timeout!\n");
-    static char *buffer = new char[1024];
-    read(timerfd, (void *)buffer, 1024);
-    // g_loop->quit();
+    printf("%s Timeout!\n",receiveTime.toFormattedString().c_str());
+    // static char *buffer = new char[1024];
+    // read(timerfd, (void *)buffer, 1024);
+    g_loop->quit();
 }
 
 int main(int argc, char const *argv[])
@@ -25,7 +27,7 @@ int main(int argc, char const *argv[])
     // 读timerfd的读取类型是uint64_t，可以直接使用，如果编译报错加头文件stdint.h。
     // timerfd读出来的值一般是1，表示超时次数
     mymuduo::Channel channel(&loop, timerfd);
-    channel.setReadCallback(std::bind(timeout, timerfd));
+    channel.setReadCallback(timeout);
     ;
     channel.enableReading();
 

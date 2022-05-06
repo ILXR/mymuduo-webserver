@@ -60,10 +60,10 @@ namespace mymuduo
 
     // the data has been read to (buf, len)
     typedef std::function<void(const TcpConnectionPtr &,
-                               //    Buffer *,
-                               //    Timestamp)>
-                               const char *,
-                               ssize_t len)>
+                               Buffer *,
+                               Timestamp)>
+        //    const char *,
+        //    ssize_t len)>
         MessageCallback;
 
     void defaultConnectionCallback(const TcpConnectionPtr &conn);

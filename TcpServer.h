@@ -45,10 +45,12 @@ namespace mymuduo
          */
         ConnectionMap connections_;
 
-        void removeConnection(const TcpConnectionPtr&conn);
+        void removeConnection(const TcpConnectionPtr &conn);
 
     public:
-        TcpServer(EventLoop *loop, const InetAddress &listenAddr);
+        TcpServer(EventLoop *loop,
+                  const InetAddress &listenAddr,
+                  const string &nameArg);
         ~TcpServer();
 
         void start();

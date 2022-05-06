@@ -19,9 +19,10 @@ void onConnection(const TcpConnectionPtr &conn)
     }
 }
 
-void onMessage(const TcpConnectionPtr &conn, const char *data, ssize_t len)
+void onMessage(const TcpConnectionPtr &conn, Buffer *buf, Timestamp receiveTime)
 {
-    printf("on message\n");
+    printf("on message: %s\n",buf->retrieveAllAsString().c_str());
+    
 }
 
 int main(int argc, char const *argv[])
@@ -30,10 +31,11 @@ int main(int argc, char const *argv[])
 
     InetAddress listenAddr(9981);
     EventLoop loop;
-    TcpServer server(&loop, listenAddr);
+    std::string name = "main";
+    TcpServer server(&loop, listenAddr, name);
     server.setConnectionCallback(onConnection);
     server.setMessageCallback(onMessage);
     server.start();
-
+    loop.loop();
     return 0;
 }

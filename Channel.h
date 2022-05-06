@@ -34,9 +34,9 @@ namespace mymuduo
          * Channel::handleEvent()是Channel的核心，它由EventLoop::loop()调用
          * 它的功能是根据revents_的值分别调用不同的用户回调
          */
-        void handleEvent();
+        void handleEvent(Timestamp receiveTime);
         /* Channel的成员函数都只能在IO线程调用，因此更新数据成员 都不必加锁 */
-        void setReadCallback(EventCallback cb)
+        void setReadCallback(ReadEventCallback cb)
         {
             readCallback_ = std::move(cb);
         }
@@ -88,7 +88,7 @@ namespace mymuduo
         bool isWriting() const { return events_ & kWriteEvent; }
         bool isReading() const { return events_ & kReadEvent; }
         bool isNoneEvent() { return events_ == kNoneEvent; }
-        void tie(const std::shared_ptr<void>& obj);
+        void tie(const std::shared_ptr<void> &obj);
 
         EventLoop *ownerLoop() { return loop_; }
         ~Channel();
@@ -115,7 +115,8 @@ namespace mymuduo
         int index_; // used by Poller, 在fd数组中的下标
         bool tied_;
         bool eventHandling_;
-        EventCallback readCallback_, writeCallback_, errorCallback_, closeCallback_;
+        EventCallback writeCallback_, errorCallback_, closeCallback_;
+        ReadEventCallback readCallback_;
     };
 }
 

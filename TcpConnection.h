@@ -5,6 +5,7 @@
 #include "Callback.h"
 #include "noncopyable.h"
 #include <boost/scoped_ptr.hpp>
+#include <muduo/net/Buffer.h>
 
 namespace mymuduo
 {
@@ -12,7 +13,7 @@ namespace mymuduo
     class Channel;
     class EventLoop;
     class TcpConnection;
-
+    using muduo::net::Buffer;
     /**
      * TcpConnection是muduo里唯一默认使用shared_ptr来管理的class，
      * 也是唯一继承enable_shared_from_this的class，这源于其模糊的生命期
@@ -26,6 +27,7 @@ namespace mymuduo
     public:
         TcpConnection(EventLoop *loop, std::string &name, int sockfd, InetAddress localAddr, InetAddress peerAddr);
         ~TcpConnection();
+
         void setConnectionCallback(ConnectionCallback cb)
         {
             connectionCallback_ = move(cb);
@@ -46,6 +48,8 @@ namespace mymuduo
 
         void connectEstablished();
         void connectDestroyed();
+        void send(const std::string &message);
+        void shutdown();
 
         bool connected() { return state_ == kConnected; }
         EventLoop *getLoop() { return loop_; }
@@ -54,22 +58,37 @@ namespace mymuduo
         InetAddress peerAddr() { return peerAddr_; }
 
     private:
+        /**
+         *    ---(established)---<  Connecting
+         *    |
+         * Connected  ------------- shutdown() ------------>  Disconnecting
+         *    |                                                     |
+         *    ---(handleClose)--->  Disconnected <---(handleClose)---
+         * 
+         */
         enum StateE
         {
             kConnecting,
             kConnected,
+            kDisconnecting,
             kDisconnected
         };
 
         void setState(StateE s) { state_ = s; }
-        void handleRead();
+        void handleRead(Timestamp receiveTime);
         void handleWrite();
         void handleClose();
         void handleError();
 
+        void sendInLoop(const std::string &message);
+        void shutdownInLoop();
+
         EventLoop *loop_;
-        std::string name_;
         StateE state_;
+        std::string name_;
+
+        Buffer inputBuffer_;
+        Buffer outputBuffer_;
 
         // TcpConnection拥有TCP socket，它 的析构函数会close(fd)（在Socket的析构函数中发生）
         boost::scoped_ptr<Socket> socket_;
@@ -79,9 +98,9 @@ namespace mymuduo
 
         InetAddress localAddr_;
         InetAddress peerAddr_;
-        ConnectionCallback connectionCallback_;
-        MessageCallback messageCallback_;
         CloseCallback closeCallback_;
+        MessageCallback messageCallback_;
+        ConnectionCallback connectionCallback_;
     };
 }
 
