@@ -7,6 +7,7 @@
  * 定义和实现都包含在同一个文件里。
  */
 #include <boost/function.hpp>
+#include "Callback.h"
 
 namespace mymuduo
 {
@@ -25,8 +26,8 @@ namespace mymuduo
     {
     public:
         typedef boost::function<void()> EventCallback;
+        typedef std::function<void(Timestamp)> ReadEventCallback;
 
-        Channel();
         Channel(EventLoop *loop, int fd);
 
         /*
@@ -35,22 +36,60 @@ namespace mymuduo
          */
         void handleEvent();
         /* Channel的成员函数都只能在IO线程调用，因此更新数据成员 都不必加锁 */
-        void setReadCallback(const EventCallback &cb) { readCallback_ = cb; }
-        void setWriteCallback(const EventCallback &cb) { writeCallback_ = cb; }
-        void setErrorCallback(const EventCallback &cb) { errorCallback_ = cb; }
+        void setReadCallback(EventCallback cb)
+        {
+            readCallback_ = std::move(cb);
+        }
+        void setWriteCallback(EventCallback cb)
+        {
+            writeCallback_ = std::move(cb);
+        }
+        void setCloseCallback(EventCallback cb)
+        {
+            closeCallback_ = std::move(cb);
+        }
+        void setErrorCallback(EventCallback cb)
+        {
+            errorCallback_ = std::move(cb);
+        }
 
         int fd() { return fd_; }
         int events() { return events_; }
+        int index() { return index_; }
+
         void set_revents(int revt) { revents_ = revt; }
-        bool isNoneEvents() { return events_ == kNoneEvent; }
+        void set_index(int idx) { index_ = idx; }
 
         void enableReading()
         {
             events_ |= kReadEvent;
             update();
         }
-        int index() { return index_; }
-        void set_index(int idx) { index_ = idx; }
+        void disableReading()
+        {
+            events_ &= ~kReadEvent;
+            update();
+        }
+        void enableWriting()
+        {
+            events_ |= kWriteEvent;
+            update();
+        }
+        void disableWriting()
+        {
+            events_ &= ~kWriteEvent;
+            update();
+        }
+        void disableAll()
+        {
+            events_ = kNoneEvent;
+            update();
+        }
+        bool isWriting() const { return events_ & kWriteEvent; }
+        bool isReading() const { return events_ & kReadEvent; }
+        bool isNoneEvent() { return events_ == kNoneEvent; }
+        void tie(const std::shared_ptr<void>& obj);
+
         EventLoop *ownerLoop() { return loop_; }
         ~Channel();
 
@@ -64,6 +103,8 @@ namespace mymuduo
         static const int kReadEvent;
         static const int kWriteEvent;
 
+        // TcpConnection 弱引用
+        std::weak_ptr<void> tie_;
         EventLoop *loop_;
         const int fd_;
         /* events_是它关心的IO事件， 由用户设置；
@@ -72,7 +113,9 @@ namespace mymuduo
          */
         int events_, revents_;
         int index_; // used by Poller, 在fd数组中的下标
-        EventCallback readCallback_, writeCallback_, errorCallback_;
+        bool tied_;
+        bool eventHandling_;
+        EventCallback readCallback_, writeCallback_, errorCallback_, closeCallback_;
     };
 }
 

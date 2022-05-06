@@ -2,14 +2,13 @@
 #define MY_TIMER_HPP
 
 #include "noncopyable.h"
-#include <muduo/base/Timestamp.h>
+#include "Timestamp.h"
 #include <muduo/net/Callbacks.h>
 #include <muduo/base/Atomic.h>
 
 namespace mymuduo
 {
 
-    using Timestamp = muduo::Timestamp;
     using AtomicInt64 = muduo::AtomicInt64;
     using TimerCallback = muduo::net::TimerCallback;
 

@@ -5,15 +5,13 @@
 #include "TimerQueue.h"
 #include <muduo/net/Callbacks.h>
 #include <muduo/net/EventLoop.h>
-#include <muduo/base/Timestamp.h>
+#include "Timestamp.h"
 #include <cstdio>
 #include <cassert>
 #include <poll.h>
 #include <stdio.h>
 
 using namespace mymuduo;
-
-using TimerCallback = muduo::net::TimerCallback;
 
 __thread EventLoop *t_loopInThisThread = 0;
 
@@ -84,6 +82,14 @@ void EventLoop::updateChannel(Channel *channel)
     poller_->updateChannel(channel);
 }
 
+/**
+ * 支持 unregister 功能
+ * （因为 TcpConnection 不再自生自灭了，可以进行管理）
+ */
+void EventLoop::removeChannel(Channel *channel){
+    poller_->removeChannel(channel);
+}
+
 void EventLoop::abortNotInLoopThread()
 {
     printf("EventLoop::abortNotInLoopThread - EventLoop was created in threadId_ = \
@@ -97,12 +103,12 @@ TimerId EventLoop::runAt(const Timestamp &time, const TimerCallback &cb)
 }
 TimerId EventLoop::runAfter(double delay, const TimerCallback &cb)
 {
-    Timestamp time(muduo::addTime(Timestamp::now(), delay));
+    Timestamp time(addTime(Timestamp::now(), delay));
     return runAt(time, cb);
 }
 TimerId EventLoop::runEvery(double interval, const TimerCallback &cb)
 {
-    Timestamp time(muduo::addTime(Timestamp::now(), interval));
+    Timestamp time(addTime(Timestamp::now(), interval));
     return timerQueue_->addTimer(cb, time, interval);
 }
 void EventLoop::cancel(TimerId timerId)

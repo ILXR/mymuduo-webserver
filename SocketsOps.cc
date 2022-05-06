@@ -1,7 +1,7 @@
 #include "SocketsOps.h"
+#include "Types.h"
 
 #include <muduo/base/Logging.h>
-#include <muduo/base/Types.h>
 #include <muduo/net/Endian.h>
 
 #include <errno.h>
@@ -12,11 +12,9 @@
 #include <unistd.h>
 
 using namespace mymuduo;
-using namespace muduo;
 
 namespace
 {
-
   typedef struct sockaddr SA;
 
 #if VALGRIND || defined(NO_ACCEPT4)
@@ -205,7 +203,7 @@ void sockets::toIpPort(char *buf, size_t size,
     toIp(buf + 1, size - 1, addr);
     size_t end = ::strlen(buf);
     const struct sockaddr_in6 *addr6 = sockaddr_in6_cast(addr);
-    uint16_t port = net::sockets::networkToHost16(addr6->sin6_port);
+    uint16_t port = muduo::net::sockets::networkToHost16(addr6->sin6_port);
     assert(size > end);
     snprintf(buf + end, size - end, "]:%u", port);
     return;
@@ -213,7 +211,7 @@ void sockets::toIpPort(char *buf, size_t size,
   toIp(buf, size, addr);
   size_t end = ::strlen(buf);
   const struct sockaddr_in *addr4 = sockaddr_in_cast(addr);
-  uint16_t port = net::sockets::networkToHost16(addr4->sin_port);
+  uint16_t port = muduo::net::sockets::networkToHost16(addr4->sin_port);
   assert(size > end);
   snprintf(buf + end, size - end, ":%u", port);
 }
@@ -239,7 +237,7 @@ void sockets::fromIpPort(const char *ip, uint16_t port,
                          struct sockaddr_in *addr)
 {
   addr->sin_family = AF_INET;
-  addr->sin_port = net::sockets::hostToNetwork16(port);
+  addr->sin_port = muduo::net::sockets::hostToNetwork16(port);
   if (::inet_pton(AF_INET, ip, &addr->sin_addr) <= 0)
   {
     LOG_SYSERR << "sockets::fromIpPort";
@@ -250,7 +248,7 @@ void sockets::fromIpPort(const char *ip, uint16_t port,
                          struct sockaddr_in6 *addr)
 {
   addr->sin6_family = AF_INET6;
-  addr->sin6_port = net::sockets::hostToNetwork16(port);
+  addr->sin6_port = muduo::net::sockets::hostToNetwork16(port);
   if (::inet_pton(AF_INET6, ip, &addr->sin6_addr) <= 0)
   {
     LOG_SYSERR << "sockets::fromIpPort";

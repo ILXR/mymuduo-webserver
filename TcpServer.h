@@ -40,15 +40,18 @@ namespace mymuduo
         int nextConnId_;
         /**
          * TcpServer持有目前存活的TcpConnection的 shared_ptr（定义为TcpConnectionPtr），
-         * 因为TcpConnection对象的生命 期是模糊的，用户也可以持有TcpConnectionPtr
+         * 因为TcpConnection对象的生命期是模糊的，用户也可以持有TcpConnectionPtr
+         * 但是在内部实现中，只有这里是对 TcpConnection 进行了存储的，所以当erase之后计数就为1，随时会析构
          */
         ConnectionMap connections_;
+
+        void removeConnection(const TcpConnectionPtr&conn);
 
     public:
         TcpServer(EventLoop *loop, const InetAddress &listenAddr);
         ~TcpServer();
 
-        void start(){}
+        void start();
         void setConnectionCallback(const ConnectionCallback &cb)
         {
             connectionCallback_ = cb;

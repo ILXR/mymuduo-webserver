@@ -26,16 +26,29 @@ namespace mymuduo
     public:
         TcpConnection(EventLoop *loop, std::string &name, int sockfd, InetAddress localAddr, InetAddress peerAddr);
         ~TcpConnection();
-        void setConnectionCallback(ConnectionCallback &cb)
+        void setConnectionCallback(ConnectionCallback cb)
         {
-            connectionCallback_ = cb;
+            connectionCallback_ = move(cb);
         }
-        void setMessageCallback(MessageCallback &cb)
+        void setMessageCallback(MessageCallback cb)
         {
-            messageCallback_ = cb;
+            messageCallback_ = move(cb);
         }
-        void connectEstablished(){}
+        /**
+         * TcpConnection class也新增了CloseCallback事件回调，但是这个回调是给TcpServer和TcpClient用的
+         * 用于通知它们移除所持有的 TcpConnectionPtr，这不是给普通用户用的，
+         * 普通用户继续使用 ConnectionCallback
+         */
+        void setCloseCallback(CloseCallback cb)
+        {
+            closeCallback_ = move(cb);
+        }
+
+        void connectEstablished();
+        void connectDestroyed();
+
         bool connected() { return state_ == kConnected; }
+        EventLoop *getLoop() { return loop_; }
         std::string name() { return name_; }
         InetAddress localAddr() { return localAddr_; }
         InetAddress peerAddr() { return peerAddr_; }
@@ -45,10 +58,14 @@ namespace mymuduo
         {
             kConnecting,
             kConnected,
+            kDisconnected
         };
 
         void setState(StateE s) { state_ = s; }
         void handleRead();
+        void handleWrite();
+        void handleClose();
+        void handleError();
 
         EventLoop *loop_;
         std::string name_;
@@ -64,6 +81,7 @@ namespace mymuduo
         InetAddress peerAddr_;
         ConnectionCallback connectionCallback_;
         MessageCallback messageCallback_;
+        CloseCallback closeCallback_;
     };
 }
 

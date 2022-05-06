@@ -1,16 +1,15 @@
 #ifndef MY_MUDUO_NET_CALLBACKS_H
 #define MY_MUDUO_NET_CALLBACKS_H
 
-#include <muduo/base/Timestamp.h>
 #include <muduo/net/Buffer.h>
 #include <functional>
 #include <memory>
+#include "Types.h"
 
 namespace mymuduo
 {
-    using muduo::Timestamp;
+    class Timestamp;
     using muduo::net::Buffer;
-    using muduo::implicit_cast;
     using std::placeholders::_1;
     using std::placeholders::_2;
     using std::placeholders::_3;

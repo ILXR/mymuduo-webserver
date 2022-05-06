@@ -1,17 +1,16 @@
 #ifndef MY_POLLER_H
 #define MY_POLLER_H
 
-#include <vector>
 #include <map>
+#include <vector>
 #include <time.h>
-#include <muduo/base/Timestamp.h>
+#include "Timestamp.h"
 #include "EventLoop.h"
 
 struct pollfd;
 
 namespace mymuduo
 {
-    using Timestamp = muduo::Timestamp;
     class Channel;
 
     /**
@@ -33,9 +32,9 @@ namespace mymuduo
         /**
          * Poller供EventLoop调用的函数目前有两个，poll()和 updateChannel()
          */
-        muduo::Timestamp poll(int timeoutMs, ChannelList *activeChannels);
+        Timestamp poll(int timeoutMs, ChannelList *activeChannels);
         void updateChannel(Channel *channel);
-
+        void removeChannel(Channel *channel);
         void assertInLoopThread() { ownerLoop_->assertInLoopThread(); }
 
     private:

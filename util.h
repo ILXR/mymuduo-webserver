@@ -7,7 +7,6 @@
 namespace mymuduo
 {
     using InetAddress = muduo::net::InetAddress;
-    
 }
 
 #endif

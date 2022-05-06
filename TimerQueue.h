@@ -2,16 +2,13 @@
 #define MY_TUMERQUEUE_H
 
 #include "Channel.h"
-#include <muduo/base/Timestamp.h>
-#include <muduo/net/Callbacks.h>
+#include "Timestamp.h"
+#include "Callback.h"
 #include <vector>
 #include <set>
 
 namespace mymuduo
 {
-
-    using TimerCallback = muduo::net::TimerCallback;
-    using Timestamp = muduo::Timestamp;
     class EventLoop;
     class TimerId;
     class Timer;

@@ -6,10 +6,10 @@
 #include <functional>
 #include <muduo/base/Mutex.h>
 #include <boost/scoped_ptr.hpp>
-#include <muduo/net/Callbacks.h>
-#include <muduo/base/Timestamp.h>
-#include <muduo/base/CurrentThread.h>
+#include "CurrentThread.h"
 #include "noncopyable.h"
+#include "Timestamp.h"
+#include "Callback.h"
 #include "TimerId.h"
 
 namespace mymuduo
@@ -18,7 +18,6 @@ namespace mymuduo
     class Channel;
     class Poller;
     class TimerQueue;
-    using TimerCallback = muduo::net::TimerCallback;
     class EventLoop : noncopyable
     {
     private:
@@ -29,7 +28,7 @@ namespace mymuduo
         bool quit_;
         bool callingPendingFunctors_;
         const pid_t threadId_;
-        muduo::Timestamp pollReturnTime_;
+        Timestamp pollReturnTime_;
 
         // 注意EventLoop通过scoped_ptr来间接持有 Poller
         boost::scoped_ptr<Poller> poller_;
@@ -65,6 +64,7 @@ namespace mymuduo
         void wakeup();
         void quit();
         void updateChannel(Channel *channel);
+        void removeChannel(Channel *channel);
 
         void runInLoop(Functor cb);
         void queueInLoop(Functor cb);
@@ -74,7 +74,7 @@ namespace mymuduo
          * 这就带来 线程安全性方面的问题，muduo的解决办法不是加锁，
          * 而是把对 TimerQueue的操作转移到IO线程来进行 -> runInLoop
          */
-        TimerId runAt(const muduo::Timestamp &time, const TimerCallback &cb);
+        TimerId runAt(const Timestamp &time, const TimerCallback &cb);
         TimerId runAfter(double delay, const TimerCallback &cb);
         TimerId runEvery(double interval, const TimerCallback &cb);
 

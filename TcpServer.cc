@@ -5,12 +5,25 @@
 #include "Acceptor.h"
 #include "TcpConnection.h"
 #include <iostream>
+#include <functional>
 
 using namespace mymuduo;
 
 TcpServer::TcpServer(EventLoop *loop, const InetAddress &listenAddr)
     : loop_(loop)
 {
+}
+
+void TcpServer::start()
+{
+    // if (started_.getAndSet(1) == 0)
+    // {
+    //     threadPool_->start(threadInitCallback_);
+
+    //     assert(!acceptor_->listening());
+    //     loop_->runInLoop(
+    //         std::bind(&Acceptor::listen, get_pointer(acceptor_)));
+    // }
 }
 
 /**
@@ -38,7 +51,25 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
     connections_[connName] = conn;
     conn->setConnectionCallback(connectionCallback_);
     conn->setMessageCallback(messageCallback_);
+    conn->setCloseCallback(std::bind(&TcpServer::removeConnection, this, _1));
     conn->connectEstablished();
+}
+
+/**
+ * 把conn从ConnectionMap中移除。这 时TcpConnection已经是命悬一线：
+ *  如果用户不持有TcpConnectionPtr的话，conn的引用计数已降到1。
+ * 注意这里一定要用 EventLoop::queueInLoop()，否则有可能出现：
+ *  Channel::handleEvent()执行到一半的时候，其所属的Channel对象本身被销毁了
+ */
+void TcpServer::removeConnection(const TcpConnectionPtr &conn)
+{
+    loop_->assertInLoopThread();
+    printf("TcpServer::removeConnection [%s] - connection %s", name_.c_str(), conn->name().c_str());
+    size_t n = connections_.erase(conn->name());
+    assert(n == 1);
+    (void)n;
+    // 用boost::bind让TcpConnection的生命期长到调用 connectDestroyed()的时刻
+    loop_->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
 }
 
 TcpServer::~TcpServer()
@@ -48,7 +79,7 @@ TcpServer::~TcpServer()
     {
         TcpConnectionPtr conn(item.second);
         item.second.reset();
-        // conn->getLoop()->runInLoop(
-        //   std::bind(&TcpConnection::connectDestroyed, conn));
+        conn->getLoop()->runInLoop(
+            std::bind(&TcpConnection::connectDestroyed, conn));
     }
 }
