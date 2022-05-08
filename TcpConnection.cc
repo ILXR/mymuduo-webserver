@@ -26,7 +26,8 @@ TcpConnection::TcpConnection(EventLoop *loop, std::string &name,
       channel_(new Channel(loop_, sockfd)),
       localAddr_(localAddr),
       peerAddr_(peerAddr),
-      inputBuffer_()
+      inputBuffer_(),
+      highWaterMark_(64 * 1024 * 1024)
 {
     channel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, _1));
     channel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
@@ -90,6 +91,10 @@ void TcpConnection::handleWrite()
             {
                 // 一旦发送完毕，立刻停止观察writable事件，避免busy loop
                 channel_->disableWriting();
+                if (writeCompleteCallback_)
+                {
+                    loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+                }
                 // 该状态表示连接需要关闭，但是还未写完数据，因此写端在此关闭
                 if (state_ == kDisconnecting)
                 {
@@ -175,6 +180,26 @@ void TcpConnection::shutdownInLoop()
     }
 }
 
+void TcpConnection::forceClose()
+{
+    // FIXME: use compare and swap
+    if (state_ == kConnected || state_ == kDisconnecting)
+    {
+        setState(kDisconnecting);
+        loop_->queueInLoop(std::bind(&TcpConnection::forceCloseInLoop, shared_from_this()));
+    }
+}
+
+void TcpConnection::forceCloseInLoop()
+{
+    loop_->assertInLoopThread();
+    if (state_ == kConnected || state_ == kDisconnecting)
+    {
+        // as if we received 0 byte in handleRead();
+        handleClose();
+    }
+}
+
 void TcpConnection::send(const std::string &message)
 {
     if (state_ == kConnected)
@@ -185,9 +210,15 @@ void TcpConnection::send(const std::string &message)
         }
         else
         {
-            loop_->runInLoop(std::bind(&TcpConnection::sendInLoop, this, message));
+            void (TcpConnection::*fp)(const std::string &message) = &TcpConnection::sendInLoop;
+            loop_->runInLoop(std::bind(fp, this, message));
         }
     }
+}
+
+void TcpConnection::sendInLoop(const std::string &message)
+{
+    sendInLoop(message.data(), message.size());
 }
 
 /**
@@ -196,19 +227,26 @@ void TcpConnection::send(const std::string &message)
  * 以后在handlerWrite()中发送剩 余的数据。
  * 如果当前outputBuffer_已经有待发送的数据，那么就不能先尝试发送了，因为这会造成数据乱序
  */
-void TcpConnection::sendInLoop(const std::string &message)
+void TcpConnection::sendInLoop(const char *data, const size_t len)
 {
     loop_->assertInLoopThread();
     ssize_t nwrote = 0;
+    size_t remaining = len;
+    bool faultError = false;
     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
     {
         // 没有在发数据
-        nwrote = ::write(channel_->fd(), message.data(), message.size());
+        nwrote = sockets::write(channel_->fd(), data, len);
         if (nwrote >= 0)
         {
-            if (implicit_cast<size_t>(nwrote) < message.size())
+            remaining = len - nwrote;
+            if (implicit_cast<size_t>(nwrote) < len)
             {
                 printf("I am going to write more data\n");
+            }
+            else if (writeCompleteCallback_)
+            {
+                loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
             }
         }
         else
@@ -216,18 +254,46 @@ void TcpConnection::sendInLoop(const std::string &message)
             nwrote = 0;
             if (errno != EWOULDBLOCK)
             {
-                perror("TcpConnection::sendInLoop\n");
+                perror("TcpConnection::sendInLoop ");
+                if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
+                {
+                    faultError = true;
+                }
             }
         }
     }
-    assert(nwrote >= 0);
-    if (implicit_cast<size_t>(nwrote) < message.size())
+    assert(remaining <= len);
+    if (!faultError && remaining > 0)
     {
-        outputBuffer_.append(message.data() + nwrote, message.size() - nwrote);
+        size_t oldlen = outputBuffer_.readableBytes();
+        if (oldlen + remaining >= highWaterMark_ && oldlen < highWaterMark_ && highWaterMarkCallback_)
+        {
+            loop_->queueInLoop(std::bind(highWaterMarkCallback_, shared_from_this(), oldlen + remaining));
+        }
+        outputBuffer_.append(static_cast<const char *>(data) + nwrote, remaining);
         if (!channel_->isWriting())
         {
             // 监听可写事件
             channel_->enableWriting();
         }
     }
+}
+
+/**
+ * 作用是禁用Nagle算法，避免连续发包出现延迟，这对编写低延迟网络服务很重要
+ */
+void TcpConnection::setTcpNoDelay(bool on)
+{
+    /**
+     * Nagle算法简单的讲就是，等待服务器应答包到达后，在发送下一个数据包。数据在发送端被缓存，
+     * 如果缓存到达指定大小就将其发送，或者在上一个数据的应答包到达，将缓存区一次性全部发送
+     * 【 若发送应用进程要把发送的数据逐个字节地送到TCP的发送缓存，
+     * 则发送方就把第一个数据字节先发送出去，把后面到达的数据字节都缓存起来。
+     * 当发送方收到对第一个数据字符的确认后，再把发送缓存中的所有数据组装成一个报文段发送出去，
+     * 同时继续对随后到达的数据进行缓存。只有收到对前一个报文段的确认后才继续发送下一个报文段。
+     * 当数据到达较快而网络速率较慢时，用这样的方法明显的减少所用的网络带宽。
+     * Nagle算法还规定，当到达的数据已经达到发送窗口大小的一半或已达到报文段的最大长度时，
+     * 就立即发送一个报文段。这样做，就可以有效的提高网络的吞吐量】
+     */
+    socket_->setTcpNoDelay(on);
 }

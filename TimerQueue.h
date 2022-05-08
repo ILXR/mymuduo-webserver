@@ -26,13 +26,12 @@ namespace mymuduo
         typedef std::set<ActiveTimer> ActiveTimerSet;
 
         EventLoop *loop_;
-        TimerList timers_; // 按到期时间排列
         const int timerfd_;
         Channel timerfdChannel_;
 
         // for cancel
         bool callingExpiredTimers_;
-        ActiveTimerSet cancelingTimers_;
+        TimerList timers_; // 按到期时间排列
         /**
          * activeTimers_保存的是目前有效的 Timer的指针，并满足invariant：
          *      timers_.size() == activeTimers_.size()
@@ -40,6 +39,7 @@ namespace mymuduo
          * 只不过timers_是按到期时间排序, activeTimers_是按对象地址排序(利用了set对pair的排序机制)
          */
         ActiveTimerSet activeTimers_;
+        ActiveTimerSet cancelingTimers_;
 
         void addTimerInLoop(Timer *timer);
         void cancelInLoop(TimerId timerId);

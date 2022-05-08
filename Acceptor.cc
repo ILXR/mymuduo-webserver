@@ -15,7 +15,7 @@ Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr)
     : loop_(loop),
       acceptSocket_(sockets::createNonblockingOrDie(AF_INET)), // ipv4
       acceptChannel_(loop_, acceptSocket_.fd()),
-      listenning_(false)
+      listening_(false)
 {
     acceptSocket_.setReuseAddr(true);
     acceptSocket_.bindAddress(listenAddr);
@@ -25,13 +25,13 @@ Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr)
 Acceptor::~Acceptor()
 {
     loop_->quit();
-    listenning_ = false;
+    listening_ = false;
 }
 
 void Acceptor::listen()
 {
     loop_->assertInLoopThread();
-    listenning_ = true;
+    listening_ = true;
     acceptSocket_.listen();
     acceptChannel_.enableReading();
 }

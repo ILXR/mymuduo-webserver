@@ -1,25 +1,46 @@
-#include "EventLoop.h"
-#include "Channel.h"
 #include "Poller.h"
+#include "EPoller.h"
 #include "TimerId.h"
-#include "TimerQueue.h"
-#include <muduo/net/Callbacks.h>
-#include <muduo/net/EventLoop.h>
+#include "Channel.h"
+#include "Callback.h"
+#include "EventLoop.h"
 #include "Timestamp.h"
+#include "SocketsOps.h"
+#include "TimerQueue.h"
 #include <cstdio>
-#include <cassert>
 #include <poll.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdio>
+#include <csignal>
 
 using namespace mymuduo;
 
 __thread EventLoop *t_loopInThisThread = 0;
 
+/**
+ * 对一个已经收到FIN包的socket调用read方法, 如果接收缓冲已空, 则返回0,
+ * 这就是常说的表示连接关闭.
+ * 但第一次对其调用write方法时, 如果发送缓冲没问题, 会返回正确写入(发送).
+ * 但发送的报文会导致对端发送RST报文, 因为对端的socket已经调用了close, 完全关闭,
+ * 既不发送, 也不接收数据.
+ * 所以, 第二次调用write方法(假设在收到RST之后), 会生成SIGPIPE信号, 导致进程退出
+ */
+class IgnoreSigPipe
+{
+public:
+    IgnoreSigPipe()
+    {
+        ::signal(SIGPIPE, SIG_IGN);
+    }
+};
+
+IgnoreSigPipe initObg;
+
 EventLoop::EventLoop()
     : looping_(false),
       quit_(false),
       threadId_(muduo::CurrentThread::tid()),
-      poller_(new Poller(this)),
+      poller_(new EPoller(this)),
       timerQueue_(new mymuduo::TimerQueue(this))
 {
     printf("EventLoop created in %d\n", threadId_);
@@ -144,6 +165,7 @@ void EventLoop::queueInLoop(Functor cb)
     }
     // 如果调用queueInLoop()的线程不是IO线程， 那么唤醒是必需的；
     // 如果在IO线程调用queueInLoop()，而此时正在调用 pending functor，那么也必须唤醒
+    // 否则下一轮的poll会监听其他的fd，而这个新添加的cb只有在其他fd监听到事件时才会执行
     if (!isInLoopThread() || callingPendingFunctors_)
     {
         wakeup();

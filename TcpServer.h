@@ -3,11 +3,15 @@
 
 #include <map>
 #include <boost/scoped_ptr.hpp>
+#include <muduo/base/Atomic.h>
+
 #include "Callback.h"
 #include "Socket.h"
 
 namespace mymuduo
 {
+    using muduo::AtomicInt32;
+    class EventLoopThreadPool;
     class EventLoop;
     class Acceptor;
     /**
@@ -17,8 +21,10 @@ namespace mymuduo
     class TcpServer
     {
     private:
-        void newConnection(int sockfd, const InetAddress &peerAddr);
+        typedef std::function<void(EventLoop *)> ThreadInitCallback;
         typedef std::map<std::string, TcpConnectionPtr> ConnectionMap;
+
+        void newConnection(int sockfd, const InetAddress &peerAddr);
 
         EventLoop *loop_;
         /**
@@ -33,10 +39,17 @@ namespace mymuduo
          * 在新建TcpConnection的时候会 原样传给后者
          */
         boost::scoped_ptr<Acceptor> acceptor_;
-        ConnectionCallback connectionCallback_;
+        /**
+         * 目前的设计是每个 TcpServer有自己的EventLoopThreadPool，
+         * 多个TcpServer之间不共享 EventLoopThreadPool
+         */
+        boost::scoped_ptr<EventLoopThreadPool> threadPool_;
         MessageCallback messageCallback_;
+        ConnectionCallback connectionCallback_;
+        WriteCompleteCallback writeCompleteCallback_;
+        ThreadInitCallback threadInitCallback_;
 
-        bool started_;
+        AtomicInt32 started_;
         int nextConnId_;
         /**
          * TcpServer持有目前存活的TcpConnection的 shared_ptr（定义为TcpConnectionPtr），
@@ -46,6 +59,7 @@ namespace mymuduo
         ConnectionMap connections_;
 
         void removeConnection(const TcpConnectionPtr &conn);
+        void removeConnectionInLoop(const TcpConnectionPtr &conn);
 
     public:
         TcpServer(EventLoop *loop,
@@ -54,6 +68,7 @@ namespace mymuduo
         ~TcpServer();
 
         void start();
+        void setThreadNum(int numThreads);
         void setConnectionCallback(const ConnectionCallback &cb)
         {
             connectionCallback_ = cb;
@@ -62,6 +77,14 @@ namespace mymuduo
         {
             messageCallback_ = cb;
         };
+        void setWriteCompleteCallback(const WriteCompleteCallback &cb)
+        {
+            writeCompleteCallback_ = cb;
+        }
+        void setThreadInitCallback(const ThreadInitCallback &cb)
+        {
+            threadInitCallback_ = cb;
+        }
     };
 
 }

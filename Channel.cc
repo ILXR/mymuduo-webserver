@@ -30,6 +30,14 @@ void Channel::update()
 {
     loop_->updateChannel(this);
 }
+
+void Channel::remove()
+{
+    assert(isNoneEvent());
+    //   addedToLoop_ = false;
+    loop_->removeChannel(this);
+}
+
 void Channel::handleEvent(Timestamp receiveTime)
 {
     eventHandling_ = true;

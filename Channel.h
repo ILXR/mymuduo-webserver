@@ -89,6 +89,7 @@ namespace mymuduo
         bool isReading() const { return events_ & kReadEvent; }
         bool isNoneEvent() { return events_ == kNoneEvent; }
         void tie(const std::shared_ptr<void> &obj);
+        void remove();
 
         EventLoop *ownerLoop() { return loop_; }
         ~Channel();

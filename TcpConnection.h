@@ -28,28 +28,40 @@ namespace mymuduo
         TcpConnection(EventLoop *loop, std::string &name, int sockfd, InetAddress localAddr, InetAddress peerAddr);
         ~TcpConnection();
 
-        void setConnectionCallback(ConnectionCallback cb)
+        void setConnectionCallback(const ConnectionCallback &cb)
         {
-            connectionCallback_ = move(cb);
+            connectionCallback_ = cb;
         }
-        void setMessageCallback(MessageCallback cb)
+        void setMessageCallback(const MessageCallback &cb)
         {
-            messageCallback_ = move(cb);
+            messageCallback_ = cb;
         }
         /**
          * TcpConnection class也新增了CloseCallback事件回调，但是这个回调是给TcpServer和TcpClient用的
          * 用于通知它们移除所持有的 TcpConnectionPtr，这不是给普通用户用的，
          * 普通用户继续使用 ConnectionCallback
          */
-        void setCloseCallback(CloseCallback cb)
+        void setCloseCallback(const CloseCallback &cb)
         {
-            closeCallback_ = move(cb);
+            closeCallback_ = cb;
+        }
+        void setHighWaterMarkCallback(const HighWaterMarkCallback &cb, size_t highWaterMark)
+        {
+            highWaterMarkCallback_ = cb;
+            highWaterMark_ = highWaterMark;
+        }
+        void setWriteCompleteCallback(const WriteCompleteCallback &cb)
+        {
+            writeCompleteCallback_ = cb;
         }
 
         void connectEstablished();
         void connectDestroyed();
         void send(const std::string &message);
         void shutdown();
+        void setTcpNoDelay(bool on);
+        void forceClose();
+        void forceCloseInLoop();
 
         bool connected() { return state_ == kConnected; }
         EventLoop *getLoop() { return loop_; }
@@ -64,7 +76,7 @@ namespace mymuduo
          * Connected  ------------- shutdown() ------------>  Disconnecting
          *    |                                                     |
          *    ---(handleClose)--->  Disconnected <---(handleClose)---
-         * 
+         *
          */
         enum StateE
         {
@@ -81,11 +93,13 @@ namespace mymuduo
         void handleError();
 
         void sendInLoop(const std::string &message);
+        void sendInLoop(const char *data, const size_t len);
         void shutdownInLoop();
 
         EventLoop *loop_;
         StateE state_;
         std::string name_;
+        size_t highWaterMark_;
 
         Buffer inputBuffer_;
         Buffer outputBuffer_;
@@ -101,6 +115,18 @@ namespace mymuduo
         CloseCallback closeCallback_;
         MessageCallback messageCallback_;
         ConnectionCallback connectionCallback_;
+        // 如果发送缓冲区被清空，就调用它
+        WriteCompleteCallback writeCompleteCallback_;
+        /**
+         * 如果用非阻塞的方式写一个proxy，proxy有C和S两个连接。
+         * 只考虑server发给client的数据流（反过来也是一样），为了
+         * 防止server发过来的数据撑爆C的输出缓冲区，一种做法是在C的
+         * HighWaterMarkCallback中停止读取S的数据，而在C的
+         * WriteCompleteCallback中恢复读取S的数据。
+         * 这就跟用粗水管往水桶里灌水，用细水管从水桶中取水一个道理，
+         * 上下两个水龙头要轮流开合，类似PWM
+         */
+        HighWaterMarkCallback highWaterMarkCallback_;
     };
 }
 

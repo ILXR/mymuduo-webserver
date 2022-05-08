@@ -25,12 +25,12 @@ namespace mymuduo
         void setNewConnectionCallback(const NewConnectionCallback &cb){
             newConnectionCallback_ = cb;
         };
-        bool listenning() const { return listenning_; }
+        bool listening() const { return listening_; }
         void listen();
 
     private:
         void handleRead(); // readable 回调函数，用于accept连接
-        bool listenning_;
+        bool listening_;
         EventLoop *loop_;
         Socket acceptSocket_;                         // RAII handle 封装了socket的生命周期
         Channel acceptChannel_;                       // 观察socket上的readable事件

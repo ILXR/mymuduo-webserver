@@ -14,9 +14,10 @@
 
 namespace mymuduo
 {
+
     const int kPollTimeMs = 10000; // poll阻塞时间，可以修改
     class Channel;
-    class Poller;
+    class EPoller;
     class TimerQueue;
     class EventLoop : noncopyable
     {
@@ -31,7 +32,7 @@ namespace mymuduo
         Timestamp pollReturnTime_;
 
         // 注意EventLoop通过scoped_ptr来间接持有 Poller
-        boost::scoped_ptr<Poller> poller_;
+        boost::scoped_ptr<EPoller> poller_;
         ChannelList activeChannels_;
         mymuduo::TimerQueue *timerQueue_;
 
@@ -65,6 +66,8 @@ namespace mymuduo
         void quit();
         void updateChannel(Channel *channel);
         void removeChannel(Channel *channel);
+
+        pid_t threadId() { return threadId_; }
 
         void runInLoop(Functor cb);
         void queueInLoop(Functor cb);

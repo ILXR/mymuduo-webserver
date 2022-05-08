@@ -41,12 +41,12 @@ namespace mymuduo
         Timestamp now(Timestamp::now());
         if (numEvents > 0)
         {
-            printf("%d events happened\n", numEvents);
+            printf("%d events happened in thread %d\n", numEvents, ownerLoop_->threadId());
             fillActiveChannels(numEvents, activeChannels);
         }
         else if (numEvents == 0)
         {
-            printf("nothing happened\n");
+            // printf("nothing happened\n");
         }
         else
         {
