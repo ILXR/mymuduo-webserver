@@ -1,29 +1,36 @@
 #include "Channel.h"
 #include "EventLoop.h"
-#include "util.h"
+
 #include <poll.h>
 #include <stdio.h>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 const int Channel::kNoneEvent = 0;
 const int Channel::kReadEvent = POLLIN | POLLPRI;
 const int Channel::kWriteEvent = POLLOUT;
 
-Channel::Channel(EventLoop *loop, int fdArg) : loop_(loop),
-                                               fd_(fdArg),
-                                               events_(0),
-                                               revents_(0),
-                                               index_(-1),
-                                               eventHandling_(false),
-                                               tie_(),
-                                               tied_(false)
+Channel::Channel(EventLoop *loop, int fdArg)
+    : loop_(loop),
+      fd_(fdArg),
+      events_(0),
+      revents_(0),
+      index_(-1),
+      tied_(false),
+      addedToLoop_(false),
+      eventHandling_(false)
 {
 }
 
 Channel::~Channel()
 {
     assert(!eventHandling_);
+    assert(!addedToLoop_);
+    if (loop_->isInLoopThread())
+    {
+        assert(!loop_->hasChannel(this));
+    }
 }
 
 void Channel::update()

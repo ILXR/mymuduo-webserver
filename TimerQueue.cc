@@ -1,8 +1,9 @@
 #include "TimerQueue.h"
 #include "EventLoop.h"
+#include "Callbacks.h"
 #include "TimerId.h"
 #include "Timer.hpp"
-#include <muduo/net/Callbacks.h>
+
 #include <functional>
 #include <sys/timerfd.h>
 
@@ -84,6 +85,7 @@ namespace mymuduo
 
 }
 using namespace mymuduo;
+using namespace mymuduo::net;
 using namespace mymuduo::detail;
 
 TimerQueue::TimerQueue(EventLoop *loop)

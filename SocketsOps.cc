@@ -1,8 +1,8 @@
 #include "SocketsOps.h"
+#include "Endian.h"
 #include "Types.h"
 
 #include <muduo/base/Logging.h>
-#include <muduo/net/Endian.h>
 
 #include <errno.h>
 #include <fcntl.h>
@@ -12,6 +12,7 @@
 #include <unistd.h>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 namespace
 {
@@ -124,7 +125,7 @@ int sockets::accept(int sockfd, struct sockaddr_in6 *addr)
     switch (savedErrno)
     {
       /**
-       * 这里区分致命错误和暂时错误，并区别对待。对于暂时错误，例如 
+       * 这里区分致命错误和暂时错误，并区别对待。对于暂时错误，例如
        *  EAGAIN、EINTR、EMFILE、ECONNABORTED等等，
        * 处理办法是忽略这次错误。对于致命错误，例如
        *  ENFILE、ENOMEM等等，
@@ -203,7 +204,7 @@ void sockets::toIpPort(char *buf, size_t size,
     toIp(buf + 1, size - 1, addr);
     size_t end = ::strlen(buf);
     const struct sockaddr_in6 *addr6 = sockaddr_in6_cast(addr);
-    uint16_t port = muduo::net::sockets::networkToHost16(addr6->sin6_port);
+    uint16_t port = sockets::networkToHost16(addr6->sin6_port);
     assert(size > end);
     snprintf(buf + end, size - end, "]:%u", port);
     return;
@@ -211,7 +212,7 @@ void sockets::toIpPort(char *buf, size_t size,
   toIp(buf, size, addr);
   size_t end = ::strlen(buf);
   const struct sockaddr_in *addr4 = sockaddr_in_cast(addr);
-  uint16_t port = muduo::net::sockets::networkToHost16(addr4->sin_port);
+  uint16_t port = sockets::networkToHost16(addr4->sin_port);
   assert(size > end);
   snprintf(buf + end, size - end, ":%u", port);
 }
@@ -237,7 +238,7 @@ void sockets::fromIpPort(const char *ip, uint16_t port,
                          struct sockaddr_in *addr)
 {
   addr->sin_family = AF_INET;
-  addr->sin_port = muduo::net::sockets::hostToNetwork16(port);
+  addr->sin_port = sockets::hostToNetwork16(port);
   if (::inet_pton(AF_INET, ip, &addr->sin_addr) <= 0)
   {
     LOG_SYSERR << "sockets::fromIpPort";
@@ -248,7 +249,7 @@ void sockets::fromIpPort(const char *ip, uint16_t port,
                          struct sockaddr_in6 *addr)
 {
   addr->sin6_family = AF_INET6;
-  addr->sin6_port = muduo::net::sockets::hostToNetwork16(port);
+  addr->sin6_port = sockets::hostToNetwork16(port);
   if (::inet_pton(AF_INET6, ip, &addr->sin6_addr) <= 0)
   {
     LOG_SYSERR << "sockets::fromIpPort";

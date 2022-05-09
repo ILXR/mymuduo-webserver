@@ -1,17 +1,18 @@
-#include "EventLoopThread.h"
+#include "Thread.h"
 #include "EventLoop.h"
-#include <muduo/base/Thread.h>
+#include "EventLoopThread.h"
 #include <muduo/base/CountDownLatch.h>
 
 #include <stdio.h>
 #include <unistd.h>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 void print(EventLoop *p = NULL)
 {
   printf("print: pid = %d, tid = %d, loop = %p\n",
-         getpid(), muduo::CurrentThread::tid(), p);
+         getpid(), CurrentThread::tid(), p);
 }
 
 void quit(EventLoop *p)
@@ -33,7 +34,7 @@ int main()
     EventLoopThread thr2;
     EventLoop *loop = thr2.startLoop();
     loop->runInLoop(std::bind(print, loop));
-    muduo::CurrentThread::sleepUsec(500 * 1000);
+    CurrentThread::sleepUsec(500 * 1000);
   }
 
   {
@@ -41,6 +42,6 @@ int main()
     EventLoopThread thr3;
     EventLoop *loop = thr3.startLoop();
     loop->runInLoop(std::bind(quit, loop));
-    muduo::CurrentThread::sleepUsec(500 * 1000);
+    CurrentThread::sleepUsec(500 * 1000);
   }
 }

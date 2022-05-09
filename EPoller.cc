@@ -1,9 +1,11 @@
 #include "EPoller.h"
 #include "Channel.h"
+
 #include <poll.h>
 #include <boost/static_assert.hpp>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 // 用来表示 channel->index() 的意义
 namespace
@@ -186,4 +188,11 @@ const char *EPoller::operationToString(int op)
         assert(false && "ERROR op");
         return "Unknown Operation";
     }
+}
+
+bool EPoller::hasChannel(Channel *channel) const
+{
+    assertInLoopThread();
+    ChannelMap::const_iterator it = channels_.find(channel->fd());
+    return it != channels_.end() && it->second == channel;
 }

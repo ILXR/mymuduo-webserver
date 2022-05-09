@@ -7,30 +7,34 @@
 
 namespace mymuduo
 {
-    class Timer;
-    class TimerQueue;
-
-    class TimerId : public copyable
+    namespace net
     {
-    public:
-        TimerId()
-            : timer_(NULL),
-              sequence_(0)
+
+        class Timer;
+        class TimerQueue;
+
+        class TimerId : public copyable
         {
-        }
+        public:
+            TimerId()
+                : timer_(NULL),
+                  sequence_(0)
+            {
+            }
 
-        TimerId(Timer *timer, int64_t seq)
-            : timer_(timer),
-              sequence_(seq)
-        {
-        }
+            TimerId(Timer *timer, int64_t seq)
+                : timer_(timer),
+                  sequence_(seq)
+            {
+            }
 
-        friend class TimerQueue;
+            friend class TimerQueue;
 
-    private:
-        Timer *timer_;
-        int64_t sequence_;
-    };
+        private:
+            Timer *timer_;
+            int64_t sequence_;
+        };
+    }
 }
 
 #endif // MYMUDUO_NET_TIMERID_H

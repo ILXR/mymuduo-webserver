@@ -2,46 +2,67 @@
 #include "EPoller.h"
 #include "TimerId.h"
 #include "Channel.h"
-#include "Callback.h"
 #include "EventLoop.h"
-#include "Timestamp.h"
-#include "SocketsOps.h"
 #include "TimerQueue.h"
-#include <cstdio>
-#include <poll.h>
-#include <cassert>
-#include <cstdio>
-#include <csignal>
+#include "SocketsOps.h"
+
+#include <algorithm>
+#include <signal.h>
+#include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <unistd.h>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
-__thread EventLoop *t_loopInThisThread = 0;
-
-/**
- * 对一个已经收到FIN包的socket调用read方法, 如果接收缓冲已空, 则返回0,
- * 这就是常说的表示连接关闭.
- * 但第一次对其调用write方法时, 如果发送缓冲没问题, 会返回正确写入(发送).
- * 但发送的报文会导致对端发送RST报文, 因为对端的socket已经调用了close, 完全关闭,
- * 既不发送, 也不接收数据.
- * 所以, 第二次调用write方法(假设在收到RST之后), 会生成SIGPIPE信号, 导致进程退出
- */
-class IgnoreSigPipe
+namespace
 {
-public:
-    IgnoreSigPipe()
-    {
-        ::signal(SIGPIPE, SIG_IGN);
-    }
-};
+    __thread EventLoop *t_loopInThisThread = 0;
 
-IgnoreSigPipe initObg;
+    const int kPollTimeMs = 10000; // poll阻塞时间，可以修改
+
+    int createEventfd()
+    {
+        int evtfd = ::eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
+        if (evtfd < 0)
+        {
+            // LOG_SYSERR << "Failed in eventfd";
+            perror("Failed in eventfd\n");
+            abort();
+        }
+        return evtfd;
+    }
+
+#pragma GCC diagnostic ignored "-Wold-style-cast"
+    /**
+     * 对一个已经收到FIN包的socket调用read方法, 如果接收缓冲已空, 则返回0,
+     * 这就是常说的表示连接关闭.
+     * 但第一次对其调用write方法时, 如果发送缓冲没问题, 会返回正确写入(发送).
+     * 但发送的报文会导致对端发送RST报文, 因为对端的socket已经调用了close, 完全关闭,
+     * 既不发送, 也不接收数据.
+     * 所以, 第二次调用write方法(假设在收到RST之后), 会生成SIGPIPE信号, 导致进程退出
+     */
+    class IgnoreSigPipe
+    {
+    public:
+        IgnoreSigPipe()
+        {
+            ::signal(SIGPIPE, SIG_IGN);
+        }
+    };
+#pragma GCC diagnostic error "-Wold-style-cast"
+
+    IgnoreSigPipe initObg;
+}
 
 EventLoop::EventLoop()
     : looping_(false),
       quit_(false),
-      threadId_(muduo::CurrentThread::tid()),
+      threadId_(CurrentThread::tid()),
       poller_(new EPoller(this)),
-      timerQueue_(new mymuduo::TimerQueue(this))
+      timerQueue_(new TimerQueue(this)),
+      wakeupFd_(createEventfd()),
+      wakeupChannel_(new Channel(this, wakeupFd_))
 {
     printf("EventLoop created in %d\n", threadId_);
     // 一个线程一个 EventLoop，所以不存在线程安全的问题
@@ -54,11 +75,17 @@ EventLoop::EventLoop()
     {
         t_loopInThisThread = this;
     }
+    wakeupChannel_->setReadCallback(
+        std::bind(&EventLoop::handleRead, this));
+    wakeupChannel_->enableReading();
 }
 
 EventLoop::~EventLoop()
 {
     assert(!looping_);
+    wakeupChannel_->disableAll();
+    wakeupChannel_->remove();
+    ::close(wakeupFd_);
     t_loopInThisThread = NULL;
 }
 
@@ -82,13 +109,12 @@ void EventLoop::loop()
     {
         activeChannels_.clear();
         pollReturnTime_ = poller_->poll(kPollTimeMs, &activeChannels_);
-        for (ChannelList::iterator it = activeChannels_.begin(); it != activeChannels_.end(); ++it)
+        for (Channel *channel : activeChannels_)
         {
-            (*it)->handleEvent(pollReturnTime_);
+            channel->handleEvent(pollReturnTime_);
         }
         doPendingFunctors();
     }
-
     printf("EventLoop stop looping\n");
     looping_ = false;
 }
@@ -110,6 +136,13 @@ void EventLoop::updateChannel(Channel *channel)
 void EventLoop::removeChannel(Channel *channel)
 {
     poller_->removeChannel(channel);
+}
+
+bool EventLoop::hasChannel(Channel *channel)
+{
+    assert(channel->ownerLoop() == this);
+    assertInLoopThread();
+    return poller_->hasChannel(channel);
 }
 
 void EventLoop::abortNotInLoopThread()

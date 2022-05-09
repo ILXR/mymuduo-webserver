@@ -1,26 +1,33 @@
+#include "TcpConnection.h"
+#include "InetAddress.h"
+#include "SocketsOps.h"
 #include "TcpClient.h"
 #include "EventLoop.h"
 #include "Connector.h"
-#include "SocketsOps.h"
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 namespace mymuduo
 {
-    namespace detail
+    namespace net
     {
 
-        void removeConnection(EventLoop *loop, const TcpConnectionPtr &conn)
+        namespace detail
         {
-            loop->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
-        }
 
-        void removeConnector(const ConnectorPtr &connector)
-        {
-            // connector->
-        }
+            void removeConnection(EventLoop *loop, const TcpConnectionPtr &conn)
+            {
+                loop->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
+            }
 
-    } // namespace detail
+            void removeConnector(const ConnectorPtr &connector)
+            {
+                // connector->
+            }
+
+        } // namespace detail
+    }
 }
 
 TcpClient::TcpClient(EventLoop *loop,

@@ -1,14 +1,12 @@
-#include "EventLoopThread.h"
 #include "EventLoop.h"
-#include "CurrentThread.h"
-#include "TimerId.h"
-#include "Callback.h"
-#include "Timestamp.h"
+#include "EventLoopThread.h"
+
 #include <stdio.h>
 #include <unistd.h>
 #include <functional>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 int cnt = 0;
 EventLoop *g_loop;
@@ -59,10 +57,10 @@ int main()
   }
   sleep(1);
   {
-    mymuduo::EventLoopThread loopThread;
+    EventLoopThread loopThread;
     EventLoop *loop = loopThread.startLoop();
     loop->runAfter(2, printTid);
     sleep(3);
-    print("thread loop exits");
+    print("thread loop exits\n");
   }
 }

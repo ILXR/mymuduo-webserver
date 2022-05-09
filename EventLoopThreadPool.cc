@@ -7,13 +7,13 @@
 // Author: Shuo Chen (chenshuo at chenshuo dot com)
 
 #include "EventLoopThreadPool.h"
-
-#include "EventLoop.h"
 #include "EventLoopThread.h"
+#include "EventLoop.h"
 
 #include <stdio.h>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 EventLoopThreadPool::EventLoopThreadPool(EventLoop *baseLoop, const string &nameArg)
     : baseLoop_(baseLoop),

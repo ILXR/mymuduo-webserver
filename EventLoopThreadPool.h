@@ -10,49 +10,50 @@
 
 namespace mymuduo
 {
-
-  class EventLoop;
-  class EventLoopThread;
-
-  class EventLoopThreadPool : noncopyable
+  namespace net
   {
-  public:
-    typedef std::function<void(EventLoop *)> ThreadInitCallback;
+    class EventLoop;
+    class EventLoopThread;
 
-    EventLoopThreadPool(EventLoop *baseLoop, const string &nameArg);
-    ~EventLoopThreadPool();
-    void setThreadNum(int numThreads) { numThreads_ = numThreads; }
-    void start(const ThreadInitCallback &cb = ThreadInitCallback());
-
-    // valid after calling start()
-    /// round-robin
-    EventLoop *getNextLoop();
-
-    /// with the same hash code, it will always return the same EventLoop
-    EventLoop *getLoopForHash(size_t hashCode);
-
-    std::vector<EventLoop *> getAllLoops();
-
-    bool started() const
+    class EventLoopThreadPool : noncopyable
     {
-      return started_;
-    }
+    public:
+      typedef std::function<void(EventLoop *)> ThreadInitCallback;
 
-    const string &name() const
-    {
-      return name_;
-    }
+      EventLoopThreadPool(EventLoop *baseLoop, const string &nameArg);
+      ~EventLoopThreadPool();
+      void setThreadNum(int numThreads) { numThreads_ = numThreads; }
+      void start(const ThreadInitCallback &cb = ThreadInitCallback());
 
-  private:
-    EventLoop *baseLoop_;
-    string name_;
-    bool started_;
-    int numThreads_;
-    int next_;
-    std::vector<std::unique_ptr<EventLoopThread>> threads_;
-    std::vector<EventLoop *> loops_;
-  };
+      // valid after calling start()
+      /// round-robin
+      EventLoop *getNextLoop();
 
+      /// with the same hash code, it will always return the same EventLoop
+      EventLoop *getLoopForHash(size_t hashCode);
+
+      std::vector<EventLoop *> getAllLoops();
+
+      bool started() const
+      {
+        return started_;
+      }
+
+      const string &name() const
+      {
+        return name_;
+      }
+
+    private:
+      EventLoop *baseLoop_;
+      string name_;
+      bool started_;
+      int numThreads_;
+      int next_;
+      std::vector<std::unique_ptr<EventLoopThread>> threads_;
+      std::vector<EventLoop *> loops_;
+    };
+  } // namespace net
 } // namespace mymuduo
 
 #endif // MY_MUDUO_NET_EVENTLOOPTHREADPOOL_H

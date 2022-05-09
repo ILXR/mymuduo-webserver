@@ -2,6 +2,7 @@
 #include "EventLoop.h"
 #include "Acceptor.h"
 #include "SocketsOps.h"
+#include "InetAddress.h"
 #include "TcpConnection.h"
 #include "EventLoopThread.h"
 #include "EventLoopThreadPool.h"
@@ -9,20 +10,34 @@
 #include <functional>
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 TcpServer::TcpServer(EventLoop *loop,
                      const InetAddress &listenAddr,
-                     const string &nameArg)
+                     const string &nameArg,
+                     Option option)
     : loop_(loop),
+      ipPort_(listenAddr.toIpPort()),
       name_(nameArg),
       acceptor_(new Acceptor(loop_, listenAddr)),
       threadPool_(new EventLoopThreadPool(loop, nameArg)),
       connectionCallback_(defaultConnectionCallback),
       messageCallback_(defaultMessageCallback),
-
       nextConnId_(1)
 {
     acceptor_->setNewConnectionCallback(std::bind(&TcpServer::newConnection, this, _1, _2));
+}
+
+TcpServer::~TcpServer()
+{
+    loop_->assertInLoopThread();
+    for (auto &item : connections_)
+    {
+        TcpConnectionPtr conn(item.second);
+        item.second.reset();
+        conn->getLoop()->runInLoop(
+            std::bind(&TcpConnection::connectDestroyed, conn));
+    }
 }
 
 void TcpServer::setThreadNum(int numThreads)
@@ -102,16 +117,4 @@ void TcpServer::removeConnectionInLoop(const TcpConnectionPtr &conn)
     EventLoop *ioLoop = conn->getLoop();
     // 用boost::bind让TcpConnection的生命期长到调用 connectDestroyed()的时刻
     ioLoop->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
-}
-
-TcpServer::~TcpServer()
-{
-    loop_->assertInLoopThread();
-    for (auto &item : connections_)
-    {
-        TcpConnectionPtr conn(item.second);
-        item.second.reset();
-        conn->getLoop()->runInLoop(
-            std::bind(&TcpConnection::connectDestroyed, conn));
-    }
 }

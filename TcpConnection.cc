@@ -1,18 +1,19 @@
 #include "TcpConnection.h"
+#include "SocketsOps.h"
 #include "EventLoop.h"
 #include "Channel.h"
 #include "Socket.h"
-#include "SocketsOps.h"
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
-void mymuduo::defaultConnectionCallback(const TcpConnectionPtr &conn)
+void mymuduo::net::defaultConnectionCallback(const TcpConnectionPtr &conn)
 {
     printf("%s is %s\n", conn->localAddr().toIpPort().c_str(), conn->connected() ? "UP" : "DOWN");
 }
-void mymuduo::defaultMessageCallback(const TcpConnectionPtr &conn,
-                                     Buffer *buffer,
-                                     Timestamp receiveTime)
+void mymuduo::net::defaultMessageCallback(const TcpConnectionPtr &conn,
+                                          Buffer *buffer,
+                                          Timestamp receiveTime)
 {
     buffer->retrieveAll();
 }

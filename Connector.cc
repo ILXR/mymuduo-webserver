@@ -2,8 +2,10 @@
 #include "Connector.h"
 #include "EventLoop.h"
 #include "SocketsOps.h"
+#include "InetAddress.h"
 
 using namespace mymuduo;
+using namespace mymuduo::net;
 
 const int Connector::kMaxRetryDelayMs;
 

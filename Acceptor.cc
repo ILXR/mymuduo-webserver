@@ -1,11 +1,14 @@
+#include "Socket.h"
 #include "Acceptor.h"
 #include "EventLoop.h"
 #include "SocketsOps.h"
+#include "InetAddress.h"
+
 #include <functional>
-#include <muduo/net/InetAddress.h>
 
 using namespace mymuduo;
-using InetAddress = muduo::net::InetAddress;
+using namespace mymuduo::net;
+
 /**
  * Acceptor的构造函数和Acceptor::listen()成员函数执行创建TCP服务端的传统步骤，
  * 即调用socket(2)、bind(2)、listen(2)等Sockets API，
@@ -24,7 +27,9 @@ Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr)
 
 Acceptor::~Acceptor()
 {
-    loop_->quit();
+    // Acceptor供TcpServer使用，调用析构函数说明整个链接已断开
+    acceptChannel_.disableAll();
+    acceptChannel_.remove();
     listening_ = false;
 }
 
@@ -56,5 +61,9 @@ void Acceptor::handleRead()
         {
             sockets::close(connfd);
         }
+    }
+    else
+    {
+        perror("in Acceptor::handleRead\n");
     }
 }
