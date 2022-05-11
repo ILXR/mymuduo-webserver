@@ -1,7 +1,7 @@
 #include "Socket.h"
 #include "SocketsOps.h"
 
-#include <muduo/base/Logging.h>
+// #include <muduo/base/Logging.h>
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -18,7 +18,7 @@ Socket::~Socket()
 bool Socket::getTcpInfo(struct tcp_info *tcpi) const
 {
   socklen_t len = sizeof(*tcpi);
-  muduo::memZero(tcpi, len);
+  memZero(tcpi, len);
   return ::getsockopt(sockfd_, SOL_TCP, TCP_INFO, tcpi, &len) == 0;
 }
 
@@ -61,7 +61,7 @@ void Socket::listen()
 int Socket::accept(InetAddress *peeraddr)
 {
   struct sockaddr_in6 addr;
-  muduo::memZero(&addr, sizeof addr);
+  memZero(&addr, sizeof addr);
   int connfd = sockets::accept(sockfd_, &addr);
   if (connfd >= 0)
   {
@@ -99,12 +99,14 @@ void Socket::setReusePort(bool on)
                          &optval, static_cast<socklen_t>(sizeof optval));
   if (ret < 0 && on)
   {
-    LOG_SYSERR << "SO_REUSEPORT failed.";
+    // LOG_SYSERR << "SO_REUSEPORT failed.";
+    perror("SO_REUSEPORT failed.\n");
   }
 #else
   if (on)
   {
-    LOG_ERROR << "SO_REUSEPORT is not supported.";
+    // LOG_ERROR << "SO_REUSEPORT is not supported.";
+    perror("SO_REUSEPORT is not supported.\n");
   }
 #endif
 }

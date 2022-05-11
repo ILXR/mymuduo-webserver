@@ -1,5 +1,5 @@
-#ifndef MY_CHANNEL_H
-#define MY_CHANNEL_H
+#ifndef MY_MUDUO_NET_CHANNEL_H
+#define MY_MUDUO_NET_CHANNEL_H
 
 /*
  * hpp（Header Plus Plus）头文件，顾名思义就是 .h 文件加上 .cpp 文件，
@@ -7,6 +7,7 @@
  * 定义和实现都包含在同一个文件里。
  */
 #include <boost/function.hpp>
+
 #include "Callbacks.h"
 
 namespace mymuduo
@@ -117,4 +118,4 @@ namespace mymuduo
     } // net
 } // mymuduo
 
-#endif // !MY_CHANNEL_H
+#endif // !MY_MUDUO_NET_CHANNEL_H

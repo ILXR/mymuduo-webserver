@@ -1,5 +1,5 @@
-#ifndef MYMUDUO_NET_ENDIAN_H
-#define MYMUDUO_NET_ENDIAN_H
+#ifndef MY_MUDUO_NET_ENDIAN_H
+#define MY_MUDUO_NET_ENDIAN_H
 
 #include <stdint.h>
 #include <endian.h>
@@ -64,4 +64,4 @@ namespace mymuduo
     }     // namespace net
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_ENDIAN_H
+#endif // MY_MUDUO_NET_ENDIAN_H

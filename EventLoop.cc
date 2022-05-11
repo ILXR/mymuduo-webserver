@@ -149,7 +149,7 @@ void EventLoop::abortNotInLoopThread()
 {
     printf("EventLoop::abortNotInLoopThread - EventLoop was created in threadId_ = \
 %d , but current thread id = %d\n",
-           threadId_, muduo::CurrentThread::tid());
+           threadId_, CurrentThread::tid());
 }
 
 TimerId EventLoop::runAt(const Timestamp &time, const TimerCallback &cb)
@@ -193,7 +193,7 @@ void EventLoop::runInLoop(Functor cb)
 void EventLoop::queueInLoop(Functor cb)
 {
     {
-        muduo::MutexLockGuard lock(mutex_);
+        MutexLockGuard lock(mutex_);
         pendingFunctors_.push_back(cb);
     }
     // 如果调用queueInLoop()的线程不是IO线程， 那么唤醒是必需的；
@@ -220,7 +220,7 @@ void EventLoop::doPendingFunctors()
          * 由于doPendingFunctors()调用的Functor可能再调用 queueInLoop(cb)，
          * 这时queueInLoop()就必须wakeup()，否则这些新加的 cb就不能被及时调用了
          */
-        muduo::MutexLockGuard lock(mutex_);
+        MutexLockGuard lock(mutex_);
         functors.swap(pendingFunctors_);
     }
     for (size_t i = 0; i < functors.size(); ++i)

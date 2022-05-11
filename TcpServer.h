@@ -2,7 +2,7 @@
 #define MY_TCP_SERVER_H
 
 #include <map>
-#include <muduo/base/Atomic.h>
+#include "Atomic.h"
 /**
  * boost::scoped_ptr的实现和std::auto_ptr非常类似，都是利用了一个栈上的对象去管理一个堆上的对象，
  * 从而使得堆上的对象随着栈上的对象销毁时自动删除。
@@ -29,7 +29,6 @@ namespace mymuduo
 {
     namespace net
     {
-        using muduo::AtomicInt32;
         class EventLoopThreadPool;
         class EventLoop;
         class Acceptor;

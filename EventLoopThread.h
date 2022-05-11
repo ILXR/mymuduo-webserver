@@ -1,8 +1,8 @@
-#ifndef MY_EVENTLOOPTHREAD_H
-#define MY_EVENTLOOPTHREAD_H
+#ifndef MY_MUDUO_NET_EVENTLOOP_THREAD_H
+#define MY_MUDUO_NET_EVENTLOOP_THREAD_H
 
+#include "Condition.h"
 #include "Thread.h"
-#include <muduo/base/Mutex.h>
 
 using namespace std;
 namespace mymuduo
@@ -25,8 +25,8 @@ namespace mymuduo
 
         private:
             Thread thread_;
-            muduo::MutexLock mutex_;
-            muduo::Condition cond_ GUARDED_BY(mutex_);
+            MutexLock mutex_;
+            Condition cond_ GUARDED_BY(mutex_);
             EventLoop *loop_ GUARDED_BY(mutex_);
             bool exiting_;
             const ThreadInitCallback &callback_;
@@ -34,4 +34,4 @@ namespace mymuduo
     }
 }
 
-#endif // !MY_EVENTLOOPTHREAD_H
+#endif // !MY_MUDUO_NET_EVENTLOOP_THREAD_H

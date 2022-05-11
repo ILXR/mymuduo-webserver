@@ -4,14 +4,12 @@
 #include "noncopyable.h"
 #include "Timestamp.h"
 #include "Callbacks.h"
-#include <muduo/base/Atomic.h>
+#include "Atomic.h"
 
 namespace mymuduo
 {
     namespace net
     {
-
-        using AtomicInt64 = muduo::AtomicInt64;
 
         class Timer : noncopyable
         {

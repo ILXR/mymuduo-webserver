@@ -2,6 +2,7 @@
 #define MY_MUDUO_NET_CALLBACKS_H
 
 #include "Timestamp.h"
+
 #include <functional>
 #include <memory>
 
@@ -25,7 +26,6 @@ namespace mymuduo
     }
 
     // Adapted from google-protobuf stubs/common.h
-    // see License in muduo/base/Types.h
     template <typename To, typename From>
     inline ::std::shared_ptr<To> down_pointer_cast(const ::std::shared_ptr<From> &f)
     {
@@ -60,4 +60,4 @@ namespace mymuduo
     } // namespace net
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_CALLBACKS_H
+#endif // MY_MUDUO_NET_CALLBACKS_H

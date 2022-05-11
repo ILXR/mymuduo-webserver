@@ -4,8 +4,8 @@
 //
 // Arghh!  I wish C++ literals were automatically of type "string".
 
-#ifndef MYMUDUO_BASE_STRINGPIECE_H
-#define MYMUDUO_BASE_STRINGPIECE_H
+#ifndef MY_MUDUO_BASE_STRINGPIECE_H
+#define MY_MUDUO_BASE_STRINGPIECE_H
 
 #include <string.h>
 #include <iosfwd> // for ostream forward-declaration

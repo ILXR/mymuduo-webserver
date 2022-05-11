@@ -1,7 +1,7 @@
 // 封装了对 socketfd 的一系列操作
 
-#ifndef MYMUDUO_NET_SOCKETSOPS_H
-#define MYMUDUO_NET_SOCKETSOPS_H
+#ifndef MY_MUDUO_NET_SOCKETSOPS_H
+#define MY_MUDUO_NET_SOCKETSOPS_H
 
 #include <arpa/inet.h>
 
@@ -52,4 +52,4 @@ namespace mymuduo
     }     // namespace net
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_SOCKETSOPS_H
+#endif // MY_MUDUO_NET_SOCKETSOPS_H

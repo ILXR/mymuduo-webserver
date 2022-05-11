@@ -1,7 +1,7 @@
 #ifndef MY_TCP_CLIENT_H
 #define MY_TCP_CLIENT_H
 
-#include <muduo/base/Mutex.h>
+#include "Mutex.h"
 #include "noncopyable.h"
 
 namespace mymuduo
@@ -12,9 +12,6 @@ namespace mymuduo
         class Connector;
         class InetAddress;
         typedef std::shared_ptr<Connector> ConnectorPtr;
-
-        using muduo::MutexLock;
-        using muduo::MutexLockGuard;
 
         class TcpClient : noncopyable
         {

@@ -1,18 +1,17 @@
 #include "Thread.h"
 #include "Timestamp.h"
+#include "Exception.h"
 #include "CurrentThread.h"
 
-#include "muduo/base/Exception.h"
-#include "muduo/base/Logging.h"
-
-#include <type_traits>
+#include <muduo/base/Logging.h>
 
 #include <errno.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <sys/prctl.h>
-#include <sys/syscall.h>
+#include <type_traits>
 #include <sys/types.h>
+#include <sys/syscall.h>
 #include <linux/unistd.h>
 
 namespace mymuduo
@@ -27,8 +26,8 @@ namespace mymuduo
 
         void afterFork()
         {
-            muduo::CurrentThread::t_cachedTid = 0;
-            muduo::CurrentThread::t_threadName = "main";
+            CurrentThread::t_cachedTid = 0;
+            CurrentThread::t_threadName = "main";
             CurrentThread::tid();
             // no need to call pthread_atfork(NULL, NULL, &afterFork);
         }
@@ -38,7 +37,7 @@ namespace mymuduo
         public:
             ThreadNameInitializer()
             {
-                muduo::CurrentThread::t_threadName = "main";
+                CurrentThread::t_threadName = "main";
                 CurrentThread::tid();
                 pthread_atfork(NULL, NULL, &afterFork);
             }
@@ -67,21 +66,21 @@ namespace mymuduo
 
             void runInThread()
             {
-                *tid_ = muduo::CurrentThread::tid();
+                *tid_ = CurrentThread::tid();
                 tid_ = NULL;
                 latch_->countDown();
                 latch_ = NULL;
 
-                muduo::CurrentThread::t_threadName = name_.empty() ? "muduoThread" : name_.c_str();
-                ::prctl(PR_SET_NAME, muduo::CurrentThread::t_threadName);
+                CurrentThread::t_threadName = name_.empty() ? "muduoThread" : name_.c_str();
+                ::prctl(PR_SET_NAME, CurrentThread::t_threadName);
                 try
                 {
                     func_();
-                    muduo::CurrentThread::t_threadName = "finished";
+                    CurrentThread::t_threadName = "finished";
                 }
-                catch (const muduo::Exception &ex)
+                catch (const mymuduo::Exception &ex)
                 {
-                    muduo::CurrentThread::t_threadName = "crashed";
+                    CurrentThread::t_threadName = "crashed";
                     fprintf(stderr, "exception caught in Thread %s\n", name_.c_str());
                     fprintf(stderr, "reason: %s\n", ex.what());
                     fprintf(stderr, "stack trace: %s\n", ex.stackTrace());
@@ -89,14 +88,14 @@ namespace mymuduo
                 }
                 catch (const std::exception &ex)
                 {
-                    muduo::CurrentThread::t_threadName = "crashed";
+                    CurrentThread::t_threadName = "crashed";
                     fprintf(stderr, "exception caught in Thread %s\n", name_.c_str());
                     fprintf(stderr, "reason: %s\n", ex.what());
                     abort();
                 }
                 catch (...)
                 {
-                    muduo::CurrentThread::t_threadName = "crashed";
+                    CurrentThread::t_threadName = "crashed";
                     fprintf(stderr, "unknown exception caught in Thread %s\n", name_.c_str());
                     throw; // rethrow
                 }

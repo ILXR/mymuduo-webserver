@@ -1,10 +1,9 @@
-#ifndef MY_EVENT_LOOP_H
-#define MY_EVENT_LOOP_H
+#ifndef MY_MUDUO_NET_EVENTLOOP_H
+#define MY_MUDUO_NET_EVENTLOOP_H
 
 #include <vector>
 #include <pthread.h>
 #include <functional>
-#include <muduo/base/Mutex.h>
 #include <boost/scoped_ptr.hpp>
 
 #include "CurrentThread.h"
@@ -12,6 +11,7 @@
 #include "Timestamp.h"
 #include "Callbacks.h"
 #include "TimerId.h"
+#include "Mutex.h"
 
 namespace mymuduo
 {
@@ -43,7 +43,7 @@ namespace mymuduo
             int wakeupFd_;
             boost::scoped_ptr<Channel> wakeupChannel_;
             // 只有pendingFunctors_暴露给了其他线程，因 此用mutex保护
-            muduo::MutexLock mutex_;
+            MutexLock mutex_;
             std::vector<Functor> pendingFunctors_; // pending - 悬而未决的，待定的
 
             void abortNotInLoopThread();
@@ -110,4 +110,4 @@ namespace mymuduo
     }
 }
 
-#endif // !MY_EVENT_LOOP_H
+#endif // !MY_MUDUO_NET_EVENTLOOP_H

@@ -1,5 +1,5 @@
-#ifndef MYMUDUO_NET_SOCKET_H
-#define MYMUDUO_NET_SOCKET_H
+#ifndef MY_MUDUO_NET_SOCKET_H
+#define MY_MUDUO_NET_SOCKET_H
 
 #include "noncopyable.h"
 #include "InetAddress.h"
@@ -73,4 +73,4 @@ namespace mymuduo
   }
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_SOCKET_H
+#endif // MY_MUDUO_NET_SOCKET_H

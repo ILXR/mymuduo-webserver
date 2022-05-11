@@ -1,5 +1,5 @@
-#ifndef MYMUDUO_BASE_TYPES_H
-#define MYMUDUO_BASE_TYPES_H
+#ifndef MY_MUDUO_BASE_TYPES_H
+#define MY_MUDUO_BASE_TYPES_H
 
 #include <stdint.h>
 #include <string.h> // memset
@@ -120,4 +120,4 @@ namespace mymuduo
 
 } // namespace mymuduo
 
-#endif // MYMUDUO_BASE_TYPES_H
+#endif // MY_MUDUO_BASE_TYPES_H

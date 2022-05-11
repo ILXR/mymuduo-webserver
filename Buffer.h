@@ -431,4 +431,4 @@ namespace mymuduo
     } // namespace net
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_BUFFER_H
+#endif // MY_MUDUO_NET_BUFFER_H

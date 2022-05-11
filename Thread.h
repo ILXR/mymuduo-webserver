@@ -1,10 +1,11 @@
-#ifndef MYMUDUO_BASE_THREAD_H
-#define MYMUDUO_BASE_THREAD_H
+#ifndef MY_MUDUO_BASE_THREAD_H
+#define MY_MUDUO_BASE_THREAD_H
 
-#include "muduo/base/CountDownLatch.h"
-#include "muduo/base/Atomic.h"
+#include "CountDownLatch.h"
 #include "noncopyable.h"
+#include "Atomic.h"
 #include "Types.h"
+
 
 #include <functional>
 #include <memory>
@@ -12,8 +13,6 @@
 
 namespace mymuduo
 {
-    using CountDownLatch = muduo::CountDownLatch;
-    using AtomicInt32 = muduo::AtomicInt32;
 
     class Thread : noncopyable
     {

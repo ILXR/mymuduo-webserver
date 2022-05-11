@@ -1,5 +1,5 @@
-#ifndef MY_CONNECTOR_H
-#define MY_CONNECTOR_H
+#ifndef MY_MUDUO_NET_CONNECTOR_H
+#define MY_MUDUO_NET_CONNECTOR_H
 
 #include "Types.h"
 #include "TimerId.h"
@@ -67,5 +67,4 @@ namespace mymuduo
         };
     }
 }
-
-#endif
+#endif // !MY_MUDUO_NET_CONNECTOR_H

@@ -1,7 +1,6 @@
 #include "Thread.h"
 #include "EventLoop.h"
 #include "EventLoopThread.h"
-#include <muduo/base/CountDownLatch.h>
 
 #include <stdio.h>
 #include <unistd.h>

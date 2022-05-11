@@ -1,5 +1,5 @@
-#ifndef MY_EPOLLER_H
-#define MY_EPOLLER_H
+#ifndef MY_MUDUO_NET_EPOLLER_H
+#define MY_MUDUO_NET_EPOLLER_H
 
 #include "Timestamp.h"
 #include "EventLoop.h"
@@ -53,4 +53,4 @@ namespace mymuduo
     }
 }
 
-#endif //! MY_EPOLLER_H
+#endif //! MY_MUDUO_NET_EPOLLER_H

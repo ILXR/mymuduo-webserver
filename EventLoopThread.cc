@@ -35,7 +35,7 @@ EventLoop *EventLoopThread::startLoop()
 
     thread_.start();
     {
-        muduo::MutexLockGuard lock(mutex_);
+        MutexLockGuard lock(mutex_);
         while (loop_ == NULL)
         {
             cond_.wait();
@@ -60,7 +60,7 @@ void EventLoopThread::threadFunc()
         callback_(&loop);
     }
     {
-        muduo::MutexLockGuard lock(mutex_);
+        MutexLockGuard lock(mutex_);
         loop_ = &loop;
         cond_.notify();
     }

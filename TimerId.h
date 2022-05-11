@@ -1,5 +1,5 @@
-#ifndef MYMUDUO_NET_TIMERID_H
-#define MYMUDUO_NET_TIMERID_H
+#ifndef MY_MUDUO_NET_TIMERID_H
+#define MY_MUDUO_NET_TIMERID_H
 
 #include "copyable.h"
 #include <cstddef>
@@ -37,4 +37,4 @@ namespace mymuduo
     }
 }
 
-#endif // MYMUDUO_NET_TIMERID_H
+#endif // MY_MUDUO_NET_TIMERID_H

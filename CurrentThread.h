@@ -1,5 +1,5 @@
-#ifndef MY_MUDUO_BASE_CURRENTTHREAD_H
-#define MY_MUDUO_BASE_CURRENTTHREAD_H
+#ifndef MY_MUDUO_CURRENTTHREAD_H
+#define MY_MUDUO_CURRENTTHREAD_H
 
 #include "Types.h"
 
@@ -46,4 +46,4 @@ namespace mymuduo
     } // namespace CurrentThread
 } // namespace mymuduo
 
-#endif // MY_MUDUO_BASE_CURRENTTHREAD_H
+#endif // MY_MUDUO_CURRENTTHREAD_H

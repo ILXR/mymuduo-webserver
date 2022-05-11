@@ -1,7 +1,7 @@
 // This is a public header file, it must only include public header files.
 
-#ifndef MYMUDUO_NET_INETADDRESS_H
-#define MYMUDUO_NET_INETADDRESS_H
+#ifndef MY_MUDUO_NET_INETADDRESS_H
+#define MY_MUDUO_NET_INETADDRESS_H
 
 #include "copyable.h"
 #include "StringPiece.h"
@@ -77,4 +77,4 @@ namespace mymuduo
     } // namespace net
 } // namespace mymuduo
 
-#endif // MYMUDUO_NET_INETADDRESS_H
+#endif // MY_MUDUO_NET_INETADDRESS_H

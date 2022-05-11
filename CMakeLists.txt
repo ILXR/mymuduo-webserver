@@ -9,11 +9,12 @@ include(CTest)
 enable_testing()
 
 #生成应用程序
-ADD_EXECUTABLE(mymuduo test_TimerQueue.cc EventLoop.cc Channel.cc
+ADD_EXECUTABLE(mymuduo test_TcpClient.cc EventLoop.cc Channel.cc
      Poller.cc EPoller.cc Timer.hpp TimerQueue.cc EventLoopThread.cc Socket.cc 
      SocketsOps.cc Acceptor.cc TcpServer.cc TcpClient.cc TcpConnection.cc Timestamp.cc
-     EventLoopThreadPool.cc Connector.cc InetAddress.cc CurrentThread.cc Buffer.cc Thread.cc)
-target_link_libraries(mymuduo pthread muduo_base muduo_net)
+     EventLoopThreadPool.cc Connector.cc InetAddress.cc CurrentThread.cc Buffer.cc Thread.cc 
+     Condition.cc CountDownLatch.cc)
+target_link_libraries(mymuduo pthread muduo_base)
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})

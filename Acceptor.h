@@ -1,5 +1,5 @@
-#ifndef MY_ACCEPTOR_H
-#define MY_ACCEPTOR_H
+#ifndef MY_MUDUO_NET_ACCEPTOR_H
+#define MY_MUDUO_NET_ACCEPTOR_H
 
 #include "noncopyable.h"
 #include "Channel.h"
@@ -49,4 +49,4 @@ namespace mymuduo
     }
 }
 
-#endif // !MY_ACCEPTOR_H
+#endif // !MY_MUDUO_NET_ACCEPTOR_H

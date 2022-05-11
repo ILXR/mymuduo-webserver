@@ -1,5 +1,5 @@
-#ifndef MYMUDUO_BASE_COPYABLE_H
-#define MYMUDUO_BASE_COPYABLE_H
+#ifndef MY_MUDUO_COPYABLE_H
+#define MY_MUDUO_COPYABLE_H
 
 namespace mymuduo
 {
@@ -13,4 +13,4 @@ namespace mymuduo
 
 }
 
-#endif // MYMUDUO_BASE_COPYABLE_H
+#endif // MY_MUDUO_COPYABLE_H
