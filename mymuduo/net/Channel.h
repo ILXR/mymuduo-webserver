@@ -7,8 +7,7 @@
  * 定义和实现都包含在同一个文件里。
  */
 #include <boost/function.hpp>
-
-#include "mymuduo/net/Callbacks.h"
+#include "mymuduo/base/Timestamp.h"
 
 namespace mymuduo
 {

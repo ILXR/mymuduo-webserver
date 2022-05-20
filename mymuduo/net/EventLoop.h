@@ -2,15 +2,12 @@
 #define MY_MUDUO_NET_EVENTLOOP_H
 
 #include <vector>
-#include <pthread.h>
 #include <functional>
 #include <boost/scoped_ptr.hpp>
 
 #include "mymuduo/base/CurrentThread.h"
-#include "mymuduo/base/noncopyable.h"
 #include "mymuduo/base/Timestamp.h"
 #include "mymuduo/base/Mutex.h"
-
 #include "mymuduo/net/Callbacks.h"
 #include "mymuduo/net/TimerId.h"
 

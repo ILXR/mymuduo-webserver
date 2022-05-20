@@ -2,13 +2,12 @@
 #define MY_TCP_CLIENT_H
 
 #include "mymuduo/base/Mutex.h"
-#include "mymuduo/base/noncopyable.h"
+#include "mymuduo/net/TcpConnection.h"
 
 namespace mymuduo
 {
     namespace net
     {
-        class EventLoop;
         class Connector;
         class InetAddress;
         typedef std::shared_ptr<Connector> ConnectorPtr;

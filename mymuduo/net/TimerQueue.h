@@ -4,6 +4,7 @@
 #include "mymuduo/base/Timestamp.h"
 #include "mymuduo/net/Callbacks.h"
 #include "mymuduo/net/Channel.h"
+#include "mymuduo/base/Mutex.h"
 
 #include <vector>
 #include <set>

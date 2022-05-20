@@ -1,7 +1,6 @@
 #ifndef MY_MUDUO_NET_ACCEPTOR_H
 #define MY_MUDUO_NET_ACCEPTOR_H
 
-#include "mymuduo/base/noncopyable.h"
 #include "mymuduo/net/Channel.h"
 #include "mymuduo/net/Socket.h"
 

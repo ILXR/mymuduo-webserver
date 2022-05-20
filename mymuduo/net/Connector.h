@@ -1,7 +1,6 @@
 #ifndef MY_MUDUO_NET_CONNECTOR_H
 #define MY_MUDUO_NET_CONNECTOR_H
 
-#include "mymuduo/base/Types.h"
 #include "mymuduo/base/noncopyable.h"
 
 #include "mymuduo/net/TimerId.h"

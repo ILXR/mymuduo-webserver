@@ -5,6 +5,9 @@
 #include "mymuduo/net/Callbacks.h"
 #include "mymuduo/net/InetAddress.h"
 #include "mymuduo/base/noncopyable.h"
+#include "mymuduo/base/StringPiece.h"
+#include "mymuduo/base/Types.h"
+
 #include <boost/scoped_ptr.hpp>
 
 namespace mymuduo

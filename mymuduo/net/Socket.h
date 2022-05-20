@@ -2,7 +2,6 @@
 #define MY_MUDUO_NET_SOCKET_H
 
 #include "mymuduo/base/noncopyable.h"
-#include "mymuduo/net/InetAddress.h"
 
 // struct tcp_info is in <netinet/tcp.h>
 struct tcp_info;
@@ -13,6 +12,7 @@ namespace mymuduo
 {
   namespace net
   {
+    class InetAddress;
     ///
     /// Wrapper of socket file descriptor.
     ///

@@ -7,7 +7,6 @@
 #include "mymuduo/base/copyable.h"
 #include "mymuduo/base/Types.h"
 
-#include "mymuduo/net/SocketsOps.h"
 #include "mymuduo/net/Endian.h"
 
 #include <vector>

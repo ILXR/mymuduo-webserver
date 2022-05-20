@@ -30,15 +30,12 @@ mkdir -p $BUILD_DIR/$BUILD_TYPE-cpp11 \
            -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
            -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
            -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
-           $SOURCE_DIR \
-  && make $*
+           $SOURCE_DIR
+if [ -d "../$BUILD_TYPE-install-cpp11" ]; then
+  rm -rf ../$BUILD_TYPE-install-cpp11
+fi
+make $*
 # $*和$@都表示传递给函数或脚本的所有参数，不被双引号“”包含时，都以$1 $2 …$n的形式输出所有参数。
 # 但是当它们被双引号" "包含时，就会有区别了：
 # "$*"会将所有的参数从整体上看做一份数据，而不是把每个参数都看做一份数据。
 # "$@"仍然将每个参数都看作一份数据，彼此之间是独立的。
-
-# Use the following command to run all the unit tests
-# at the dir $BUILD_DIR/$BUILD_TYPE :
-# CTEST_OUTPUT_ON_FAILURE=TRUE make test
-
-# cd $SOURCE_DIR && doxygen

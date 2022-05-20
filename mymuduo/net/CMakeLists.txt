@@ -35,7 +35,6 @@ target_link_libraries(mymuduo_net mymuduo_base)
 
 install(TARGETS mymuduo_net DESTINATION lib)
 
-# 这里没有包括 Connector.h Poller.h Socket.h 等是因为这些是不对用户暴露的 
 set(HEADERS
     Buffer.h
     Callbacks.h
@@ -46,8 +45,8 @@ set(HEADERS
     EventLoopThreadPool.h
     InetAddress.h
     TcpClient.h
-    TcpConnection.h
     TcpServer.h
+    TcpConnection.h
     TimerId.h
 )
 install(FILES ${HEADERS} DESTINATION include/mymuduo/net)

@@ -22,9 +22,8 @@
  *      因此boost::scoped_ptr是不能管理数组对象的，
  *      如果要管理数组对象需要使用boost::scoped_array类。
  */
-
-#include "mymuduo/net/Callbacks.h"
-#include "mymuduo/net/Socket.h"
+#include "mymuduo/base/Types.h"
+#include "mymuduo/net/TcpConnection.h"
 
 namespace mymuduo
 {
