@@ -2,6 +2,7 @@
 #include "mymuduo/net/Channel.h"
 
 #include <poll.h>
+#include <cassert>
 #include <boost/static_assert.hpp>
 
 using namespace mymuduo;

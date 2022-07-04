@@ -4,7 +4,7 @@
 #include "mymuduo/net/Channel.h"
 #include "mymuduo/net/Socket.h"
 
-#include <boost/function.hpp>
+#include <functional>
 
 namespace mymuduo
 {
@@ -20,7 +20,7 @@ namespace mymuduo
         class Acceptor : noncopyable
         {
         public:
-            typedef boost::function<void(int sockfd, const InetAddress &)> NewConnectionCallback;
+            typedef std::function<void(int sockfd, const InetAddress &)> NewConnectionCallback;
 
             Acceptor(EventLoop *loop, const InetAddress &listenAddr);
             ~Acceptor();

@@ -6,7 +6,7 @@
 #include <string>
 
 #ifndef NDEBUG
-#include <assert.h>
+#include <cassert>
 #endif
 
 ///
@@ -16,11 +16,20 @@ namespace mymuduo
 {
 
     using std::string;
-
+    // 简化了用 memset 初始化的使用
     inline void memZero(void *p, size_t n)
     {
         memset(p, 0, n);
     }
+
+    /** 关于类型转换
+     * 隐式类型转换：隐式类型转化是编译器默默地、隐式地、偷偷地进行的类型转换，这种转换不需要程序员干预，会自动发生
+     * 强制类型转换: C++中有四种强制转换 const_cast，static_cast，dynamic_cast，reinterpret_cast
+     *
+     * 在类层次结构中基类（父类）和派生类（子类）之间指针或引用的转换时，
+     * 进行上行转换（把派生类的指针或引用转换成基类表示）是安全的；
+     * 进行下行转换（把基类指针或引用转换成派生类表示）时，由于没有动态类型检查，所以是不安全的。
+     */
 
     // Taken from google-protobuf stubs/common.h
     //
@@ -76,6 +85,15 @@ namespace mymuduo
     // implicit_cast would have been part of the C++ standard library,
     // but the proposal was submitted too late.  It will probably make
     // its way into the language in the future.
+
+    /** implicit_cast 简单的隐式转换
+     * 用于在继承关系中， 子类指针转化为父类指针；
+     * 隐式转换inferred 推断，因为 from type 可以被推断出来，所以使用方法和 static_cast 相同
+     * 在up_cast时应该使用 implicit_cast 替换 static_cast,因为前者比后者要安全。
+     *
+     * 在菱形继承中，static_cast把最底层的对象可以为中层对象，这样编译可以通过，但是在运行时可能崩溃
+     * implicit_cast 就不会有这个问题，在编译时就会给出错误信息
+     */
     template <typename To, typename From>
     inline To implicit_cast(From const &f)
     {
@@ -100,6 +118,12 @@ namespace mymuduo
     //    if (dynamic_cast<Subclass2>(foo)) HandleASubclass2Object(foo);
     // You should design the code some other way not to need this.
 
+    /** down_cast 向下转换
+     * down_cast在debug模式下内部使用了dynamic_cast进行验证，在release下使用static_cast替换dynamic_cast。
+     * 为什么使用down_cast而不直接使用dynamic_cast?
+     * 1. 因为但凡程序设计正确，dynamic_cast就可以用static_cast来替换，而后者比前者更有效率。
+     * 2. dynamic_cast可能失败(在运行时crash)，运行时RTTI不是好的设计，不应该在运行时RTTI，或者需要RTTI时一般都有更好的选择。
+     */
     template <typename To, typename From> // use like this: down_cast<T*>(foo);
     inline To down_cast(From *f)          // so we only accept pointers
     {

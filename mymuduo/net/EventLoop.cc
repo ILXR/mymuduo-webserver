@@ -185,7 +185,7 @@ void EventLoop::runInLoop(Functor cb)
 
 /**
  * 在它的IO线程内执行某个用户 任务回调，即EventLoop::runInLoop(const Functor& cb)
- * 其中Functor是 boost::function<void()>。如果用户在当前IO线程调用这个函数,
+ * 其中Functor是 std::function<void()>。如果用户在当前IO线程调用这个函数,
  * 回调会同步进行；如果用户在其他线程调用runInLoop()，cb会被加入队列，
  * IO 线程会被唤醒来调用这个Functor
  */

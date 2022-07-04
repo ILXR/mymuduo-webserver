@@ -6,7 +6,8 @@
 #include "mymuduo/net/TimerId.h"
 #include "mymuduo/net/InetAddress.h"
 
-#include <boost/function.hpp>
+#include <memory>
+#include <functional>
 
 namespace mymuduo
 {
@@ -24,7 +25,7 @@ namespace mymuduo
                           public std::enable_shared_from_this<Connector>
         {
         public:
-            typedef boost::function<void(int sockfd)> NewConnectionCallback;
+            typedef std::function<void(int sockfd)> NewConnectionCallback;
             Connector(EventLoop *loop, const InetAddress &serverAddr);
             ~Connector();
 

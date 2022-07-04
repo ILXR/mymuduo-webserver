@@ -16,10 +16,13 @@
  * __attribute__前后都有两个下划线，并且后面会紧跟一对原括弧，括弧里面是相应的__attribute__参数
  * __attribute__语法格式为：
  *      __attribute__ ( ( attribute-list ) )
+ * 但是这里用到的线性安全注解是 clang 提供的，并且提供了官方推荐的宏定义
+ * 必须定义了__SUPPORT_TS_ANNOTATION__或者__clang__，Thread Safety Annotations 才起作用，否则是no-op
  */
 
 // Enable thread safety attributes only with clang.
 // The attributes can be safely erased when compiling with other compilers.
+// 这里 SWIG 是一个能将 C/C++ 程序与其他各种高级语言连接的开发工具
 #if defined(__clang__) && (!defined(SWIG))
 #define THREAD_ANNOTATION_ATTRIBUTE__(x) __attribute__((x))
 #else
@@ -91,6 +94,15 @@
 
 #ifdef NDEBUG
 __BEGIN_DECLS
+/**
+ * 为了使 C 代码和 C++ 代码保持互相兼容的过程调用接口，需要在 C++ 代码里加上 extern “C” 作为符号声明的一部分
+ * #if defined(__cplusplus)
+ *     #define __BEGIN_DECLS   extern "C" {
+ *     #define __END_DECLS     }
+ * #else
+ *     #define __BEGIN_DECLS
+ *     #define __END_DECLS
+ */
 extern void __assert_perror_fail(int errnum,
                                  const char *file,
                                  unsigned int line,
@@ -130,7 +142,13 @@ namespace mymuduo
     class CAPABILITY("mutex") MutexLock : noncopyable
     {
     public:
-        MutexLock() : holder_(0) { MCHECK(pthread_mutex_init(&mutex_, NULL)); }
+        MutexLock() : holder_(0)
+        {
+            pthread_mutexattr_t attr;
+            pthread_mutexattr_init(&attr);
+            pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
+            MCHECK(pthread_mutex_init(&mutex_, &attr));
+        }
         ~MutexLock()
         {
             // assert()在 release build里是空语句，所以发行版中不要使用 assert

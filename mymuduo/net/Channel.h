@@ -6,8 +6,9 @@
  * 在 boost 开源库中频繁出现，其实就是 .cpp 实现代码混入 .h 文件当中，
  * 定义和实现都包含在同一个文件里。
  */
-#include <boost/function.hpp>
 #include "mymuduo/base/Timestamp.h"
+#include <memory>
+#include <functional>
 
 namespace mymuduo
 {
@@ -20,14 +21,14 @@ namespace mymuduo
          * 每个Channel对象自始至终只属于一个EventLoop， 因此每个Channel对象都只属于某一个IO线程。
          * 每个Channel对象自始至终只负责一个文件描述符（fd）的IO事件分发，但它并不拥有这个fd，
          * 也不会在析构的时候关闭这个fd。Channel会把不同的IO事件分发为不同的回调，
-         * 例如ReadCallback、WriteCallback等，而且“回调”用 boost::function表示，
+         * 例如ReadCallback、WriteCallback等，而且“回调”用 std::function表示，
          * 用户无须继承Channel，Channel不是基类。
          * fd 可以是 socket, eventfd, timerfd, signalfd
          */
         class Channel
         {
         public:
-            typedef boost::function<void()> EventCallback;
+            typedef std::function<void()> EventCallback;
             typedef std::function<void(Timestamp)> ReadEventCallback;
 
             Channel(EventLoop *loop, int fd);

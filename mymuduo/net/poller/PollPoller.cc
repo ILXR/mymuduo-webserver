@@ -4,6 +4,7 @@
 #include "mymuduo/base/Types.h"
 
 #include <algorithm>
+#include <cassert>
 #include <stdio.h>
 #include <poll.h>
 
