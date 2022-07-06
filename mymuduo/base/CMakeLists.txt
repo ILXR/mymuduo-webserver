@@ -1,11 +1,23 @@
 set(base_SRCS
+    # about Thread
     Condition.cc
     CountDownLatch.cc
     CurrentThread.cc
-    Exception.cc
     Thread.cc
-    Timestamp.cc
     ThreadPool.cc
+    # about util
+    Exception.cc
+    FileUtil.cc
+    ProcessInfo.cc
+    # about Time
+    Timestamp.cc
+    TimeZone.cc
+    Date.cc
+    # about Log
+    LogStream.cc
+    LogFile.cc
+    AsyncLogging.cc
+    Logging.cc
     )
 
 add_library(mymuduo_base ${base_SRCS})
@@ -23,3 +35,7 @@ install(TARGETS mymuduo_base DESTINATION lib)
 file(GLOB HEADERS "*.h")
 # FILES 安装普通文件
 install(FILES ${HEADERS} DESTINATION include/mymuduo/base)
+
+if(MYMUDUO_BUILD_EXAMPLES)
+    add_subdirectory(tests)
+endif()
