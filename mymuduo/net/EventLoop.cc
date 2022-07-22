@@ -1,7 +1,8 @@
 #include "mymuduo/net/EventLoop.h"
 
-#include "mymuduo/net/Poller.h"
 #include "mymuduo/base/Mutex.h"
+#include "mymuduo/base/Logging.h"
+#include "mymuduo/net/Poller.h"
 #include "mymuduo/net/Channel.h"
 #include "mymuduo/net/TimerQueue.h"
 #include "mymuduo/net/SocketsOps.h"
@@ -16,6 +17,7 @@ using namespace mymuduo::net;
 
 namespace
 {
+    // 每个线程仅有一个实例，是线程全局变量
     __thread EventLoop *t_loopInThisThread = 0;
 
     const int kPollTimeMs = 10000; // poll阻塞时间，可以修改
@@ -32,14 +34,16 @@ namespace
         return evtfd;
     }
 
-#pragma GCC diagnostic ignored "-Wold-style-cast"
+#pragma GCC diagnostic ignored "-Wold-style-cast" // 旧式强制转换
     /**
-     * 对一个已经收到FIN包的socket调用read方法, 如果接收缓冲已空, 则返回0,
-     * 这就是常说的表示连接关闭.
+     * 默认情况下，往一个读端关闭的管道或socket连接中写数据将引发SIGPIPE信号
+     * 对一个已经收到FIN包的socket调用read方法, 如果接收缓冲已空, 则返回0, 这就是常说的表示连接关闭.
      * 但第一次对其调用write方法时, 如果发送缓冲没问题, 会返回正确写入(发送).
      * 但发送的报文会导致对端发送RST报文, 因为对端的socket已经调用了close, 完全关闭,
      * 既不发送, 也不接收数据.
      * 所以, 第二次调用write方法(假设在收到RST之后), 会生成SIGPIPE信号, 导致进程退出
+     * 但是 IO 复用已经提供了相关检查功能：
+     * 以poll为例，当管道的读端关闭时，写端文件描述符上的POLLHUP事件将被触发；当socket连接被对方关闭时，socket上的POLLRDHUP事件将被触发。
      */
     class IgnoreSigPipe
     {
@@ -63,12 +67,11 @@ EventLoop::EventLoop()
       wakeupFd_(createEventfd()),
       wakeupChannel_(new Channel(this, wakeupFd_))
 {
-    printf("EventLoop created in %d\n", threadId_);
+    LOG_DEBUG << "EventLoop created " << this << " in Thread" << threadId_;
     // 一个线程一个 EventLoop，所以不存在线程安全的问题
     if (t_loopInThisThread)
     {
-        printf("Another EventLoop has exists in thread %d\n", threadId_);
-        exit(1);
+        LOG_FATAL << "Another EventLoop " << t_loopInThisThread << " has existed in thread " << threadId_;
     }
     else
     {
@@ -114,7 +117,7 @@ void EventLoop::loop()
         }
         doPendingFunctors();
     }
-    printf("EventLoop stop looping\n");
+    LOG_DEBUG << "EventLoop " << this << " stop looping";
     looping_ = false;
 }
 
@@ -146,9 +149,8 @@ bool EventLoop::hasChannel(Channel *channel)
 
 void EventLoop::abortNotInLoopThread()
 {
-    printf("EventLoop::abortNotInLoopThread - EventLoop was created in threadId_ = \
-%d , but current thread id = %d\n",
-           threadId_, CurrentThread::tid());
+    LOG_FATAL << "EventLoop::abortNotInLoopThread - EventLoop was created in threadId_ = "
+              << threadId_ << ", but current thread id = " << CurrentThread::tid();
 }
 
 TimerId EventLoop::runAt(const Timestamp &time, const TimerCallback &cb)
@@ -235,7 +237,7 @@ void EventLoop::wakeup()
     ssize_t n = write(wakeupFd_, &one, sizeof one);
     if (n != sizeof one)
     {
-        printf("EventLoop::wakeup() writes %ld bytes instead of 8\n", n);
+        LOG_DEBUG << "EventLoop::wakeup() writes " << n << " bytes instead of 8";
     }
 }
 
@@ -245,7 +247,7 @@ void EventLoop::handleRead()
     ssize_t n = read(wakeupFd_, &one, sizeof one);
     if (n != sizeof one)
     {
-        printf("EventLoop::handleRead() reads %ld bytes instead of 8", n);
+        LOG_DEBUG << "EventLoop::wakeup() reads " << n << " bytes instead of 8";
     }
 }
 

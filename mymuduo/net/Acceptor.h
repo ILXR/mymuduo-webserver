@@ -44,6 +44,8 @@ namespace mymuduo
             Channel acceptChannel_;
             // 用户回调函数，accept之后调用
             NewConnectionCallback newConnectionCallback_;
+            // 空闲描述符，当进程文件描述符被用光后，来了一个新的连接，就先将连接转移到 idleFd_，然后再关闭它
+            int idleFd_;
         };
     }
 }

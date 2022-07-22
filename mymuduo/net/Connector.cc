@@ -1,4 +1,6 @@
 #include "mymuduo/net/Channel.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/Connector.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/SocketsOps.h"
@@ -16,10 +18,12 @@ Connector::Connector(EventLoop *loop, const InetAddress &serverAddr)
       state_(kDisconnected),
       retryDelayMs_(kInitRetryDelayMs)
 {
+    LOG_DEBUG << "ctor[" << this << "]";
 }
 
 Connector::~Connector()
 {
+    LOG_DEBUG << "dtor[" << this << "]";
     assert(!channel_);
     // 即使该定时器已经失效也没关系，TimerQueue会处理
     loop_->cancel(timerId_);
@@ -41,7 +45,7 @@ void Connector::startInLoop()
     }
     else
     {
-        printf("do not connect");
+        LOG_DEBUG << "do not connect";
     }
 }
 
@@ -76,13 +80,20 @@ void Connector::connect()
     switch (savedErrno)
     {
     case 0:
+    /**
+     * 针对非阻塞I/O执行的系统调用则总是立即返回，而不管事件是否已经发生。
+     * 如果事件没有立即发生，这些系统调用就返回-1，和出错的情况一样。
+     * 此时我们必须根据errno来区分这两种情况。对accept、send和recv而言，
+     * 事件未发生时errno通常被设置成EAGAIN（意为“再来一次”）或者EWOULDBLOCK（意为“期望阻塞”）；
+     * 对connect而言，errno则被设置成EINPROGRESS（意为“在处理中”）。
+     */
     case EINPROGRESS: // “正在连接”的返回码是EINPROGRESS。
     case EINTR:
     case EISCONN:
         connecting(sockfd);
         break;
         /**
-         * 错误代码与 accept 不同，EAGAIN 是真的错误，表明本机 ephemeral port 暂时用完，
+         * connect 错误代码与 accept 不同，EAGAIN 是真的错误，表明本机 ephemeral port 暂时用完，
          * 要关闭 socket 再延期重试。
          * 另外，即便出现socket可写，也不一定意味着连接已成功建立，
          * 还需要用 getsockopt(sockfd, SOL_SOCKET, SO_ERROR, ...)再次确认一下
@@ -101,11 +112,12 @@ void Connector::connect()
     case EBADF:
     case EFAULT:
     case ENOTSOCK:
-        perror("connect error in Connector::startInLoop ");
+        LOG_SYSERR << "connect error in Connector::startInLoop " << savedErrno;
         sockets::close(sockfd);
         break;
+
     default:
-        perror("Unexpected error in Connector::startInLoop ");
+        LOG_SYSERR << "Unexpected error in Connector::startInLoop " << savedErrno;
         sockets::close(sockfd);
         // connectErrorCallback_();
         break;
@@ -154,7 +166,7 @@ void Connector::resetChannel()
 
 void Connector::handleWrite()
 {
-    printf("Connector::handleWrite \n");
+    LOG_TRACE << "Connector::handleWrite " << state_;
 
     if (state_ == kConnecting)
     {
@@ -162,7 +174,8 @@ void Connector::handleWrite()
         int err = sockets::getSocketError(sockfd);
         if (err)
         {
-            printf("Connector::handleWrite - SO_ERROR = %d %s\n", err, strerror(err));
+            LOG_WARN << "Connector::handleWrite - SO_ERROR = "
+                     << err << " " << strerror_tl(err);
             retry(sockfd);
         }
         /**
@@ -178,7 +191,7 @@ void Connector::handleWrite()
          */
         else if (sockets::isSelfConnect(sockfd))
         {
-            printf("Connector::handleWrite - Self connect");
+            LOG_WARN << "Connector::handleWrite - Self connect";
             retry(sockfd);
         }
         else
@@ -204,12 +217,12 @@ void Connector::handleWrite()
 
 void Connector::handleError()
 {
-    printf("Connector::handleError state=%d\n", state_);
+    LOG_ERROR << "Connector::handleError state=" << state_;
     if (state_ == kConnecting)
     {
         int sockfd = removeAndResetChannel();
         int err = sockets::getSocketError(sockfd);
-        printf("SO_ERROR = %d %s\n", err, strerror(err));
+        LOG_TRACE << "SO_ERROR = " << err << " " << strerror_tl(err);
         retry(sockfd);
     }
 }
@@ -220,8 +233,8 @@ void Connector::retry(int sockfd)
     setState(kDisconnected);
     if (connect_)
     {
-        printf("Connector::retry - Retry connecting to %s in %d milliseconds.\n",
-               serverAddr_.toIpPort().c_str(), retryDelayMs_);
+        LOG_INFO << "Connector::retry - Retry connecting to " << serverAddr_.toIpPort()
+                 << " in " << retryDelayMs_ << " milliseconds. ";
         /**
          * 重试的间隔应该逐渐延长，例如0.5s、1s、2s、4s，直至30s，即 back-off。
          * 这会造成对象生命期管理方面的困难，如果使用 EventLoop::runAfter()定时
@@ -234,6 +247,6 @@ void Connector::retry(int sockfd)
     }
     else
     {
-        perror("do not connect\n");
+        LOG_DEBUG << "do not connect";
     }
 }

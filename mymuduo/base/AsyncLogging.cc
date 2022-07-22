@@ -10,7 +10,12 @@
 #include <stdio.h>
 
 using namespace mymuduo;
-
+/**
+ *  @brief  异步日志写入本地文件
+ *  @param  basename 本地文件名
+ *  @param  rollSize 预留日志大小，即日志滚动阈值，当积累多条日志后将切换日志文件
+ *  @param  flushInterval 刷新间隔，写入本地
+ */
 AsyncLogging::AsyncLogging(const string &basename,
                            off_t rollSize,
                            int flushInterval)

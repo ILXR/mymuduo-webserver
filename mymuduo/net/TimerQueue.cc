@@ -1,4 +1,6 @@
 #include "mymuduo/net/TimerQueue.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/Callbacks.h"
 #include "mymuduo/net/TimerId.h"
@@ -30,7 +32,7 @@ namespace mymuduo
             int timerfd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
             if (timerfd < 0)
             {
-                perror("Failed in timerfd_create\n");
+                LOG_SYSFATAL << "Failed in timerfd_create";
             }
             return timerfd;
         }
@@ -60,10 +62,11 @@ namespace mymuduo
         {
             uint64_t howmany;
             ssize_t n = ::read(timerfd, &howmany, sizeof howmany);
-            printf("TimerQueue::handleRead() %ld at %s\n", howmany, now.toString().c_str());
+            LOG_TRACE << "TimerQueue::handleRead() " << howmany << " at " << now.toString();
             if (n != sizeof howmany)
             {
-                printf("TimerQueue::handleRead() reads %ld bytes instead of 8\n", n);
+                // 写入 u64 所以读取也需要是对应大小才正确
+                LOG_ERROR << "TimerQueue::handleRead() reads " << n << " bytes instead of 8";
             }
         }
 
@@ -78,7 +81,7 @@ namespace mymuduo
             int ret = ::timerfd_settime(timerfd, 0, &newValue, &oldValue);
             if (ret)
             {
-                perror("timerfd_settime()\n");
+                LOG_SYSERR << "timerfd_settime()";
             }
         }
     }
@@ -159,7 +162,7 @@ void TimerQueue::handleRead()
  * 从timers_中移除已到期的Timer，并通过vector返回它们。
  * 编译器会实施RVO优化，不必太担心性能，必要时可以像EventLoop::activeChannels_那样复用vector。
  * 注意其中哨兵值（sentry）的选取，sentry让set::lower_bound()返回的是第一个未到期的Timer的迭代器，
- * 因此L145的断言中是<而非≤
+ * 因此断言中是<而非≤
  */
 std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now) // expired - (因到期而)失效，终止
 {
@@ -188,7 +191,6 @@ std::vector<TimerQueue::Entry> TimerQueue::getExpired(Timestamp now) // expired 
 
 /**
  * 调用辅助函数 addTimerInLoop ，将其作为任务添加到 EventLoop 任务队列中（需保证在统一线程运行）
- *
  */
 TimerId TimerQueue::addTimer(TimerCallback cb, Timestamp when, double interval)
 {

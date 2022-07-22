@@ -1,5 +1,6 @@
 #include "mymuduo/net/InetAddress.h"
-// #include "Logging.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/Endian.h"
 #include "mymuduo/net/SocketsOps.h"
 
@@ -128,7 +129,7 @@ bool InetAddress::resolve(StringArg hostname, InetAddress *out)
      *                        如果失败，则result为NULL
      *                h_errnop——存储错误码
      * 该函数成功返回0，失败返回一个非0的数。
-     * 
+     *
      * struct hostent {
      *       char *h_name;                      // official name of host
      *       char **h_aliases;                  // alias list
@@ -149,8 +150,7 @@ bool InetAddress::resolve(StringArg hostname, InetAddress *out)
     {
         if (ret)
         {
-            //   LOG_SYSERR << "InetAddress::resolve";
-            perror("InetAddress::resolve\n");
+            LOG_SYSERR << "InetAddress::resolve";
         }
         return false;
     }

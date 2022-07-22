@@ -1,8 +1,8 @@
 #include "mymuduo/net/Socket.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/InetAddress.h"
 #include "mymuduo/net/SocketsOps.h"
-
-// #include <muduo/base/Logging.h>
 
 #include <netinet/in.h>
 #include <netinet/tcp.h>
@@ -100,14 +100,12 @@ void Socket::setReusePort(bool on)
                          &optval, static_cast<socklen_t>(sizeof optval));
   if (ret < 0 && on)
   {
-    // LOG_SYSERR << "SO_REUSEPORT failed.";
-    perror("SO_REUSEPORT failed.\n");
+    LOG_SYSERR << "SO_REUSEPORT failed.";
   }
 #else
   if (on)
   {
-    // LOG_ERROR << "SO_REUSEPORT is not supported.";
-    perror("SO_REUSEPORT is not supported.\n");
+    LOG_ERROR << "SO_REUSEPORT is not supported.";
   }
 #endif
 }

@@ -36,7 +36,7 @@ namespace mymuduo
 
             // for cancel
             bool callingExpiredTimers_;
-            TimerList timers_; // 按到期时间排列
+            TimerList timers_; // 按到期时间排列，是一个 set，用红黑树实现，并且使用 pair 作为key，这样可以按照 到期时间/timer指针 进行区分
             /**
              * activeTimers_保存的是目前有效的 Timer的指针，并满足invariant：
              *      timers_.size() == activeTimers_.size()

@@ -5,9 +5,9 @@
 #include <functional>
 #include <boost/scoped_ptr.hpp>
 
-#include "mymuduo/base/CurrentThread.h"
-#include "mymuduo/base/Timestamp.h"
 #include "mymuduo/base/Mutex.h"
+#include "mymuduo/base/Timestamp.h"
+#include "mymuduo/base/CurrentThread.h"
 #include "mymuduo/net/Callbacks.h"
 #include "mymuduo/net/TimerId.h"
 
@@ -29,7 +29,7 @@ namespace mymuduo
             bool looping_;
             bool quit_;
             bool callingPendingFunctors_;
-            const pid_t threadId_;
+            const pid_t threadId_; // EventLoop的构造函数会记住本对象所属的线程（threadId_）
             Timestamp pollReturnTime_;
 
             // 注意EventLoop通过scoped_ptr来间接持有 Poller
@@ -37,8 +37,8 @@ namespace mymuduo
             ChannelList activeChannels_;
             TimerQueue *timerQueue_;
 
-            // wakeupChannel_用于处理wakeupFd_上的readable事件，将事件分发至handleRead()函数
             int wakeupFd_;
+            // wakeupChannel_用于处理wakeupFd_上的readable事件，将事件分发至handleRead()函数
             boost::scoped_ptr<Channel> wakeupChannel_;
             // 只有pendingFunctors_暴露给了其他线程，因 此用mutex保护
             MutexLock mutex_;
@@ -60,7 +60,7 @@ namespace mymuduo
 
             /*
              * 创建了EventLoop对象的线程是 IO线程，其主要功能是运行事件循环EventLoop:: loop()
-             * EventLoop对象 的生命期通常和其所属的线程一样长，它不必是heap对象
+             * EventLoop对象的生命期通常和其所属的线程一样长，它不必是heap对象
              **/
             void loop();
             void wakeup();
@@ -88,6 +88,7 @@ namespace mymuduo
              * 哪些成员函数只能在某个特定线程调用（主要是IO线程）。
              * 为了能在运行时检查这些pre-condition，EventLoop提供了
              * isInLoopThread()和 assertInLoopThread()等函数
+             * CurrentThread::tid() 中存储的是每个线程单独持有一份的 tid变量，而 threadId_存储的是 EventLoop从属的线程
              */
             bool isInLoopThread() const { return threadId_ == CurrentThread::tid(); }
 
@@ -101,7 +102,7 @@ namespace mymuduo
             }
 
             /*
-             * 返回该线程对应的唯一 EventLoop
+             * 返回该线程对应的唯一 EventLoop，作为静态成员函数，返回的指针也是每个线程共享的
              */
             static EventLoop *getEventLoopOfCurrentThread();
         };

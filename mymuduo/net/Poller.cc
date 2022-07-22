@@ -1,4 +1,5 @@
 #include "mymuduo/net/Poller.h"
+
 #include "mymuduo/net/Channel.h"
 #include "mymuduo/net/EventLoop.h"
 
@@ -15,8 +16,4 @@ bool Poller::hasChannel(Channel *channel)
     assertInLoopThread();
     ChannelMap::const_iterator it = channels_.find(channel->fd());
     return it != channels_.end() && it->second == channel;
-}
-void Poller::assertInLoopThread() const
-{
-    ownerLoop_->assertInLoopThread();
 }

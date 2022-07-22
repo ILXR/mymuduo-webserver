@@ -1,7 +1,9 @@
+#include "mymuduo/net/TcpClient.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/TcpConnection.h"
 #include "mymuduo/net/InetAddress.h"
 #include "mymuduo/net/SocketsOps.h"
-#include "mymuduo/net/TcpClient.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/Connector.h"
 
@@ -33,8 +35,7 @@ namespace mymuduo
 TcpClient::TcpClient(EventLoop *loop,
                      const InetAddress &serverAddr,
                      const string &nameArg)
-    //   : loop_(CHECK_NOTNULL(loop)),
-    : loop_(loop),
+    : loop_(CHECK_NOTNULL(loop)),
       connector_(new Connector(loop, serverAddr)),
       name_(nameArg),
       connectionCallback_(defaultConnectionCallback),
@@ -43,19 +44,14 @@ TcpClient::TcpClient(EventLoop *loop,
       connect_(true),
       nextConnId_(1)
 {
-    connector_->setNewConnectionCallback(
-        std::bind(&TcpClient::newConnection, this, _1));
+    connector_->setNewConnectionCallback(std::bind(&TcpClient::newConnection, this, _1));
     // FIXME setConnectFailedCallback
-    // LOG_INFO << "TcpClient::TcpClient[" << name_
-    //          << "] - connector " << get_pointer(connector_);
-    printf("TcpClient::TcpClient[%s] - connector \n", name_.c_str());
+    LOG_INFO << "TcpClient::TcpClient[" << name_ << "] - connector " << get_pointer(connector_);
 }
 
 TcpClient::~TcpClient()
 {
-    //   LOG_INFO << "TcpClient::~TcpClient[" << name_
-    //            << "] - connector " << get_pointer(connector_);
-    printf("TcpClient::~TcpClient[%s] - connector \n", name_.c_str());
+    LOG_INFO << "TcpClient::~TcpClient[" << name_ << "] - connector " << get_pointer(connector_);
     TcpConnectionPtr conn;
     bool unique = false;
     {
@@ -68,8 +64,7 @@ TcpClient::~TcpClient()
         assert(loop_ == conn->getLoop());
         // FIXME: not 100% safe, if we are in different thread
         CloseCallback cb = std::bind(&detail::removeConnection, loop_, _1);
-        loop_->runInLoop(
-            std::bind(&TcpConnection::setCloseCallback, conn, cb));
+        loop_->runInLoop(std::bind(&TcpConnection::setCloseCallback, conn, cb));
         if (unique)
         {
             conn->forceClose();
@@ -86,10 +81,8 @@ TcpClient::~TcpClient()
 void TcpClient::connect()
 {
     // FIXME: check state
-    //   LOG_INFO << "TcpClient::connect[" << name_ << "] - connecting to "
-    //            << connector_->serverAddress().toIpPort();
-    printf("TcpClient::connect[%s] - connecting to %s\n",
-           name_.c_str(), connector_->serverAddress().toIpPort().c_str());
+    LOG_INFO << "TcpClient::connect[" << name_ << "] - connecting to "
+             << connector_->serverAddress().toIpPort();
     connect_ = true;
     connector_->start();
 }
@@ -156,8 +149,8 @@ void TcpClient::removeConnection(const TcpConnectionPtr &conn)
     loop_->queueInLoop(std::bind(&TcpConnection::connectDestroyed, conn));
     if (retry_ && connect_)
     {
-        // LOG_INFO << "TcpClient::connect[" << name_ << "] - Reconnecting to "
-        //          << connector_->serverAddress().toIpPort();
+        LOG_INFO << "TcpClient::connect[" << name_ << "] - Reconnecting to "
+                 << connector_->serverAddress().toIpPort();
         connector_->restart();
     }
 }

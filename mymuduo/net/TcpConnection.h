@@ -78,6 +78,7 @@ namespace mymuduo
                 kDisconnected
             };
 
+            const char *stateToString() const;
             void setState(StateE s) { state_ = s; }
             void handleRead(Timestamp receiveTime);
             void handleWrite();
@@ -98,15 +99,16 @@ namespace mymuduo
             // TcpConnection拥有TCP socket，它 的析构函数会close(fd)（在Socket的析构函数中发生）
             boost::scoped_ptr<Socket> socket_;
             // TcpConnection使用Channel 来获得socket上的IO事件，它会自己处理writable事件，
-            // 而把readable事 件通过MessageCallback传达给客户
+            // 而把readable 事件通过MessageCallback传达给客户
             boost::scoped_ptr<Channel> channel_;
 
             InetAddress localAddr_;
             InetAddress peerAddr_;
             size_t highWaterMark_;
-            
+
             CloseCallback closeCallback_;
             MessageCallback messageCallback_;
+            // connectionCallback_ 会在连接成功建立和关闭的时候调用，两处触发
             ConnectionCallback connectionCallback_;
             // 如果发送缓冲区被清空，就调用它
             WriteCompleteCallback writeCompleteCallback_;

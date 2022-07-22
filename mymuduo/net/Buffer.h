@@ -40,6 +40,11 @@ namespace mymuduo
                   readerIndex_(kCheapPrepend),
                   writerIndex_(kCheapPrepend)
             {
+                /**
+                 * prependable = readIndex
+                 * readable = writeIndex - readIndex
+                 * writeable = size() - writeIndex
+                 */
                 assert(readableBytes() == 0);
                 assert(writableBytes() == initialSize);
                 assert(prependableBytes() == kCheapPrepend);

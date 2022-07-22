@@ -1,7 +1,8 @@
 #include "mymuduo/net/poller/PollPoller.h"
-#include "mymuduo/net/Channel.h"
 
 #include "mymuduo/base/Types.h"
+#include "mymuduo/base/Logging.h"
+#include "mymuduo/net/Channel.h"
 
 #include <algorithm>
 #include <cassert>
@@ -40,19 +41,24 @@ Timestamp PollPoller::poll(int timeoutMs, ChannelList *activeChannels)
      *      -1  表示poll() 函数调用失败，同时回自动设置全局变量errno.
      */
     int numEvents = ::poll(&*pollfds_.begin(), pollfds_.size(), timeoutMs);
+    int savedErrno = errno;
     Timestamp now(Timestamp::now());
     if (numEvents > 0)
     {
-        printf("%d events happened\n", numEvents);
+        LOG_TRACE << numEvents << " events happened";
         fillActiveChannels(numEvents, activeChannels);
     }
     else if (numEvents == 0)
     {
-        // printf("nothing happened\n");
+        // LOG_TRACE << " nothing happened";
     }
     else
     {
-        perror("PollPoller::poll()\n");
+        if (savedErrno != EINTR)
+        {
+            errno = savedErrno;
+            LOG_SYSERR << "PollPoller::poll()";
+        }
     }
     return now;
 }
@@ -91,7 +97,7 @@ void PollPoller::fillActiveChannels(int numEvents, ChannelList *activeChannels) 
 void PollPoller::updateChannel(Channel *channel)
 {
     assertInLoopThread();
-    printf("fd = %d, events = %d\n", channel->fd(), channel->events());
+    LOG_TRACE << "fd = " << channel->fd() << " events = " << channel->events();
     if (channel->index() < 0)
     {
         // 下标小于0，说明是新的Channel
@@ -131,7 +137,7 @@ void PollPoller::updateChannel(Channel *channel)
 void PollPoller::removeChannel(Channel *channel)
 {
     assertInLoopThread();
-    printf("PollPoller::removeChannel fd = %d\n", channel->fd());
+    LOG_TRACE << "PollPoller::removeChannel fd = " << channel->fd();
     assert(channels_.find(channel->fd()) != channels_.end());
     assert(channels_[channel->fd()] == channel);
     assert(channel->isNoneEvent());
@@ -151,7 +157,7 @@ void PollPoller::removeChannel(Channel *channel)
     else
     {
         /**
-         * 中从数组pollfds_中删除元素是O(1)复杂度，办法是将待删除的元素与最后一个元素交换
+         * 从数组pollfds_中删除元素是O(1)复杂度，办法是将待删除的元素与最后一个元素交换
          * 再pollfds_.pop_back()
          */
         int channelAdEnd = pollfds_.back().fd;

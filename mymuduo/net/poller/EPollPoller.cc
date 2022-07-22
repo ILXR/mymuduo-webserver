@@ -1,9 +1,10 @@
 #include "mymuduo/net/poller/EPollPoller.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/Channel.h"
 
 #include <poll.h>
 #include <cassert>
-#include <boost/static_assert.hpp>
 
 using namespace mymuduo;
 using namespace mymuduo::net;
@@ -16,12 +17,14 @@ namespace
     const int kDeleted = 2;
 }
 
-BOOST_STATIC_ASSERT(EPOLLIN == POLLIN);
-BOOST_STATIC_ASSERT(EPOLLPRI == POLLPRI);
-BOOST_STATIC_ASSERT(EPOLLOUT == POLLOUT);
-BOOST_STATIC_ASSERT(EPOLLRDHUP == POLLRDHUP);
-BOOST_STATIC_ASSERT(EPOLLERR == POLLERR);
-BOOST_STATIC_ASSERT(EPOLLHUP == POLLHUP);
+// On Linux, the constants of poll(2) and epoll(4)
+// are expected to be the same.
+static_assert(EPOLLIN == POLLIN, "epoll uses same flag values as poll");
+static_assert(EPOLLPRI == POLLPRI, "epoll uses same flag values as poll");
+static_assert(EPOLLOUT == POLLOUT, "epoll uses same flag values as poll");
+static_assert(EPOLLRDHUP == POLLRDHUP, "epoll uses same flag values as poll");
+static_assert(EPOLLERR == POLLERR, "epoll uses same flag values as poll");
+static_assert(EPOLLHUP == POLLHUP, "epoll uses same flag values as poll");
 
 EPollPoller::EPollPoller(EventLoop *loop)
     : Poller(loop),
@@ -30,8 +33,7 @@ EPollPoller::EPollPoller(EventLoop *loop)
 {
     if (epollfd_ < 0)
     {
-        perror("EPollPoller::EPollPoller\n");
-        exit(1);
+        LOG_SYSFATAL << "EPollPoller::EPollPoller";
     }
 }
 
@@ -44,10 +46,11 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels)
 {
     int numEvents = ::epoll_wait(epollfd_, &*events_.begin(),
                                  static_cast<int>(events_.size()), timeoutMs);
+    int savedErrno = errno;
     Timestamp now(Timestamp::now());
     if (numEvents > 0)
     {
-        printf("%d events happened\n", numEvents);
+        LOG_TRACE << numEvents << " events happened";
         fillActiveChannels(numEvents, activeChannels);
         if (implicit_cast<size_t>(numEvents) == events_.size())
         {
@@ -57,11 +60,15 @@ Timestamp EPollPoller::poll(int timeoutMs, ChannelList *activeChannels)
     }
     else if (numEvents == 0)
     {
-        // printf("nothing happened\n");
+        // LOG_TRACE << " nothing happened";
     }
     else
     {
-        perror("EPollPoller::poll()\n");
+        if (savedErrno != EINTR)
+        {
+            errno = savedErrno;
+            LOG_SYSERR << "EPollPoller::poll()";
+        }
     }
     return now;
 }
@@ -94,8 +101,8 @@ void EPollPoller::updateChannel(Channel *channel)
      *
      */
     const int index = channel->index();
-    //   LOG_TRACE << "fd = " << channel->fd()
-    // << " events = " << channel->events() << " index = " << index;
+    LOG_TRACE << "fd = " << channel->fd()
+              << " events = " << channel->events() << " index = " << index;
     if (index == kNew || index == kDeleted)
     {
         // a new one, add with EPOLL_CTL_ADD
@@ -137,7 +144,7 @@ void EPollPoller::removeChannel(Channel *channel)
 {
     EPollPoller::assertInLoopThread();
     int fd = channel->fd();
-    // LOG_TRACE << "fd = " << fd;
+    LOG_TRACE << "fd = " << fd;
     assert(channels_.find(fd) != channels_.end());
     assert(channels_[fd] == channel);
     assert(channel->isNoneEvent());
@@ -161,17 +168,17 @@ void EPollPoller::update(int operation, Channel *channel)
     event.events = channel->events();
     event.data.ptr = channel;
     int fd = channel->fd();
-    // LOG_TRACE << "epoll_ctl op = " << operationToString(operation)
-    //           << " fd = " << fd << " event = { " << channel->eventsToString() << " }";
+    LOG_TRACE << "epoll_ctl op = " << operationToString(operation)
+              << " fd = " << fd << " event = { " << channel->eventsToString() << " }";
     if (::epoll_ctl(epollfd_, operation, fd, &event) < 0)
     {
         if (operation == EPOLL_CTL_DEL)
         {
-            // LOG_SYSERR << "epoll_ctl op =" << operationToString(operation) << " fd =" << fd;
+            LOG_SYSERR << "epoll_ctl op =" << operationToString(operation) << " fd =" << fd;
         }
         else
         {
-            // LOG_SYSFATAL << "epoll_ctl op =" << operationToString(operation) << " fd =" << fd;
+            LOG_SYSFATAL << "epoll_ctl op =" << operationToString(operation) << " fd =" << fd;
         }
     }
 }

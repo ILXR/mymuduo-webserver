@@ -1,6 +1,7 @@
 #include "mymuduo/net/TcpConnection.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/TcpServer.h"
+#include "mymuduo/base/Logging.h"
 
 using namespace mymuduo;
 using namespace mymuduo::net;
@@ -23,12 +24,13 @@ void onConnection(const TcpConnectionPtr &conn)
 void onMessage(const TcpConnectionPtr &conn, Buffer *buf, Timestamp receiveTime)
 {
     string msg = buf->retrieveAllAsString();
-    printf("on message: %s\n", msg.c_str());
+    printf("on message: %s", msg.c_str());
     conn->send(msg);
 }
 
 int main(int argc, char const *argv[])
 {
+    Logger::setLogLevel(Logger::TRACE);
     printf("main(): pid = %d", getpid());
 
     InetAddress listenAddr(9981);

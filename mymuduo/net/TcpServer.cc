@@ -1,4 +1,6 @@
 #include "mymuduo/net/TcpServer.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/Acceptor.h"
 #include "mymuduo/net/SocketsOps.h"
@@ -32,6 +34,8 @@ TcpServer::TcpServer(EventLoop *loop,
 TcpServer::~TcpServer()
 {
     loop_->assertInLoopThread();
+    LOG_TRACE << "TcpServer::~TcpServer [" << name_ << "] destructing";
+
     for (auto &item : connections_)
     {
         TcpConnectionPtr conn(item.second);
@@ -76,10 +80,10 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
     snprintf(buf, sizeof buf, "#%d", nextConnId_);
     ++nextConnId_;
     std::string connName = name_ + buf;
-    std::cout << "TcpServer::newConnection [" << name_
-              << "] - new connection [" << connName
-              << "] from " << peerAddr.toIpPort() << endl;
 
+    LOG_INFO << "TcpServer::newConnection [" << name_
+             << "] - new connection [" << connName
+             << "] from " << peerAddr.toIpPort();
     InetAddress localAddr(sockets::getLocalAddr(sockfd));
     EventLoop *ioLoop = threadPool_->getNextLoop();
 
@@ -98,10 +102,11 @@ void TcpServer::newConnection(int sockfd, const InetAddress &peerAddr)
 }
 
 /**
- * 把conn从ConnectionMap中移除。这 时TcpConnection已经是命悬一线：
+ * 把conn从ConnectionMap中移除。这时TcpConnection已经是命悬一线：
  *  如果用户不持有TcpConnectionPtr的话，conn的引用计数已降到1。
- * 注意这里一定要用 EventLoop::queueInLoop()，否则有可能出现：
- *  Channel::handleEvent()执行到一半的时候，其所属的Channel对象本身被销毁了
+ *  因此使用 bind 将 conn 绑定到connectDestroyed，这样就可以保证 conn能够正常释放资源。
+ * 注意这里一定要用EventLoop::queueInLoop()，否则有可能出现抢占调度，使得
+ *  Channel::handleEvent()执行到一半的时候，其所属的Channel对象本身被销毁了。
  */
 void TcpServer::removeConnection(const TcpConnectionPtr &conn)
 {
@@ -111,7 +116,7 @@ void TcpServer::removeConnection(const TcpConnectionPtr &conn)
 void TcpServer::removeConnectionInLoop(const TcpConnectionPtr &conn)
 {
     loop_->assertInLoopThread();
-    printf("TcpServer::removeConnection [%s] - connection %s\n", name_.c_str(), conn->name().c_str());
+    LOG_INFO << "TcpServer::removeConnectionInLoop [" << name_ << "] - connection " << conn->name();
     size_t n = connections_.erase(conn->name());
     assert(n == 1);
     (void)n;

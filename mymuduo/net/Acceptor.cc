@@ -1,9 +1,12 @@
 #include "mymuduo/net/Acceptor.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/SocketsOps.h"
 #include "mymuduo/net/InetAddress.h"
 
 #include <functional>
+#include <fcntl.h>
 
 using namespace mymuduo;
 using namespace mymuduo::net;
@@ -17,8 +20,10 @@ Acceptor::Acceptor(EventLoop *loop, const InetAddress &listenAddr)
     : listening_(false),
       loop_(loop),
       acceptSocket_(sockets::createNonblockingOrDie(AF_INET)), // ipv4
-      acceptChannel_(loop_, acceptSocket_.fd())
+      acceptChannel_(loop_, acceptSocket_.fd()),
+      idleFd_(::open("/dev/null", O_RDONLY | O_CLOEXEC))
 {
+    assert(idleFd_ >= 0);
     acceptSocket_.setReuseAddr(true);
     acceptSocket_.bindAddress(listenAddr);
     acceptChannel_.setReadCallback(std::bind(&Acceptor::handleRead, this));
@@ -30,10 +35,12 @@ Acceptor::~Acceptor()
     acceptChannel_.disableAll();
     acceptChannel_.remove();
     listening_ = false;
+    ::close(idleFd_);
 }
 
 void Acceptor::listen()
 {
+    // Acceptor封装好，只供TcpServer使用，必须在自己的线程上阻塞
     loop_->assertInLoopThread();
     listening_ = true;
     acceptSocket_.listen();
@@ -43,7 +50,7 @@ void Acceptor::listen()
 void Acceptor::handleRead()
 {
     loop_->assertInLoopThread();
-    InetAddress peerAddr(0);
+    InetAddress peerAddr;
     int connfd = acceptSocket_.accept(&peerAddr);
     if (connfd >= 0)
     {
@@ -63,6 +70,16 @@ void Acceptor::handleRead()
     }
     else
     {
-        perror("in Acceptor::handleRead\n");
+        LOG_SYSERR << "in Acceptor::handleRead";
+        // Read the section named "The special problem of
+        // accept()ing when you can't" in libev's doc.
+        // By Marc Lehmann, author of libev.
+        if (errno == EMFILE)
+        {
+            ::close(idleFd_);
+            idleFd_ = ::accept(acceptSocket_.fd(), NULL, NULL);
+            ::close(idleFd_);
+            idleFd_ = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
+        }
     }
 }

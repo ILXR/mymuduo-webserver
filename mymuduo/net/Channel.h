@@ -22,7 +22,7 @@ namespace mymuduo
          * 每个Channel对象自始至终只负责一个文件描述符（fd）的IO事件分发，但它并不拥有这个fd，
          * 也不会在析构的时候关闭这个fd。Channel会把不同的IO事件分发为不同的回调，
          * 例如ReadCallback、WriteCallback等，而且“回调”用 std::function表示，
-         * 用户无须继承Channel，Channel不是基类。
+         * 用户无须继承Channel，Channel不是基类, Channel的生命期由其owner class负责管理，它一般是其他class的直接或间接成员
          * fd 可以是 socket, eventfd, timerfd, signalfd
          */
         class Channel
@@ -88,10 +88,15 @@ namespace mymuduo
 
             EventLoop *ownerLoop() { return loop_; }
 
+            // for debug
+            string reventsToString() const;
+            string eventsToString() const;
+
         private:
             static string eventsToString(int fd, int ev);
+            void handleEventWithGuard(Timestamp receiveTime);
             /*
-             * Channel::update()会调用EventLoop::updateChannel()，后者会转而调 用Poller::updateChannel()
+             * Channel::update()会调用EventLoop::updateChannel()，后者会转而调用Poller::updateChannel()
              */
             void update();
 

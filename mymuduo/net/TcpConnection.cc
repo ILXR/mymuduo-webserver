@@ -1,4 +1,6 @@
 #include "mymuduo/net/TcpConnection.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/SocketsOps.h"
 #include "mymuduo/net/EventLoop.h"
 #include "mymuduo/net/Channel.h"
@@ -9,7 +11,9 @@ using namespace mymuduo::net;
 
 void mymuduo::net::defaultConnectionCallback(const TcpConnectionPtr &conn)
 {
-    printf("%s is %s\n", conn->localAddr().toIpPort().c_str(), conn->connected() ? "UP" : "DOWN");
+    LOG_TRACE << conn->localAddr().toIpPort() << " -> "
+              << conn->peerAddr().toIpPort() << " is "
+              << (conn->connected() ? "UP" : "DOWN");
 }
 void mymuduo::net::defaultMessageCallback(const TcpConnectionPtr &conn,
                                           Buffer *buffer,
@@ -32,10 +36,19 @@ TcpConnection::TcpConnection(EventLoop *loop, std::string &name,
 {
     channel_->setReadCallback(std::bind(&TcpConnection::handleRead, this, _1));
     channel_->setWriteCallback(std::bind(&TcpConnection::handleWrite, this));
+    channel_->setCloseCallback(std::bind(&TcpConnection::handleClose, this));
+    channel_->setErrorCallback(std::bind(&TcpConnection::handleError, this));
+    LOG_DEBUG << "TcpConnection::ctor[" << name_ << "] at " << this
+              << " fd=" << sockfd;
+    socket_->setKeepAlive(true);
 }
 
 TcpConnection::~TcpConnection()
 {
+    LOG_DEBUG << "TcpConnection::dtor[" << name_ << "] at " << this
+              << " fd=" << channel_->fd()
+              << " state=" << stateToString();
+    assert(state_ == kDisconnected);
 }
 
 void TcpConnection::handleRead(Timestamp receiveTime)
@@ -71,6 +84,7 @@ void TcpConnection::handleRead(Timestamp receiveTime)
     else
     {
         errno = savedErrno;
+        LOG_SYSERR << "TcpConnection::handleRead";
         handleError();
     }
 }
@@ -102,20 +116,17 @@ void TcpConnection::handleWrite()
                     shutdownInLoop();
                 }
             }
-            else
-            {
-                printf("I am going to write more data\n");
-            }
         }
         else
         {
             // 一旦发生错误，handleRead()会读到0字节，继而关闭连接
-            perror("TcpConnection::handleWrite\n");
+            LOG_SYSERR << "TcpConnection::handleWrite";
         }
     }
     else
     {
-        printf("Connection is down, no more writing\n");
+        LOG_TRACE << "Connection fd = " << channel_->fd()
+                  << " is down, no more writing";
     }
 }
 
@@ -126,16 +137,22 @@ void TcpConnection::handleWrite()
 void TcpConnection::handleClose()
 {
     loop_->assertInLoopThread();
-    printf("TcpConnection::handleClose state = %d\n", state_);
+    LOG_TRACE << "fd = " << channel_->fd() << " state = " << stateToString();
     assert(state_ == kConnected || state_ == kDisconnecting);
+    setState(kDisconnected);
     channel_->disableAll();
-    closeCallback_(shared_from_this());
+
+    TcpConnectionPtr guardThis(shared_from_this());
+    connectionCallback_(guardThis);
+    // must be the last line
+    closeCallback_(guardThis);
 }
 
 void TcpConnection::handleError()
 {
     int err = sockets::getSocketError(channel_->fd());
-    printf("TcpConnection::handleError [%s] - SO_ERROR = %d , %s\n", name_.c_str(), err, strerror(err));
+    LOG_ERROR << "TcpConnection::handleError [" << name_
+              << "] - SO_ERROR = " << err << " " << strerror_tl(err);
 }
 
 void TcpConnection::connectEstablished()
@@ -143,6 +160,7 @@ void TcpConnection::connectEstablished()
     loop_->assertInLoopThread();
     assert(state_ == kConnecting);
     setState(kConnected);
+    // 建立连接之后就和 Channel 绑定起来，这样 TcpConnection 的生命周期一定长于 Channel
     channel_->tie(shared_from_this());
     channel_->enableReading();
 
@@ -157,11 +175,14 @@ void TcpConnection::connectEstablished()
 void TcpConnection::connectDestroyed()
 {
     loop_->assertInLoopThread();
-    assert(state_ == kConnected || state_ == kDisconnecting);
-    setState(kDisconnected);
-    channel_->disableAll();
-    connectionCallback_(shared_from_this());
-    loop_->removeChannel(get_pointer(channel_));
+    LOG_TRACE << stateToString();
+    if (state_ == kConnected)
+    {
+        setState(kDisconnected);
+        channel_->disableAll();
+        connectionCallback_(shared_from_this());
+    }
+    channel_->remove();
 }
 
 void TcpConnection::shutdown()
@@ -223,9 +244,9 @@ void TcpConnection::sendInLoop(const std::string &message)
 }
 
 /**
- * sendInLoop()会先尝试直接发送数据，如果一次发送完毕就不会启 用WriteCallback；
+ * sendInLoop()会先尝试直接发送数据，如果一次发送完毕就不会启用 WriteCallback；
  * 如果只发送了部分数据，则把剩余的数据放入 outputBuffer_，并开始关注writable事件，
- * 以后在handlerWrite()中发送剩 余的数据。
+ * 以后在handlerWrite()中发送剩余的数据。
  * 如果当前outputBuffer_已经有待发送的数据，那么就不能先尝试发送了，因为这会造成数据乱序
  */
 void TcpConnection::sendInLoop(const char *data, const size_t len)
@@ -234,6 +255,11 @@ void TcpConnection::sendInLoop(const char *data, const size_t len)
     ssize_t nwrote = 0;
     size_t remaining = len;
     bool faultError = false;
+    if (state_ == kDisconnected)
+    {
+        LOG_WARN << "disconnected, give up writing";
+        return;
+    }
     if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
     {
         // 没有在发数据
@@ -241,11 +267,7 @@ void TcpConnection::sendInLoop(const char *data, const size_t len)
         if (nwrote >= 0)
         {
             remaining = len - nwrote;
-            if (implicit_cast<size_t>(nwrote) < len)
-            {
-                printf("I am going to write more data\n");
-            }
-            else if (writeCompleteCallback_)
+            if (remaining == 0 && writeCompleteCallback_)
             {
                 loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
             }
@@ -255,7 +277,7 @@ void TcpConnection::sendInLoop(const char *data, const size_t len)
             nwrote = 0;
             if (errno != EWOULDBLOCK)
             {
-                perror("TcpConnection::sendInLoop ");
+                LOG_SYSERR << "TcpConnection::sendInLoop";
                 if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
                 {
                     faultError = true;
@@ -297,4 +319,21 @@ void TcpConnection::setTcpNoDelay(bool on)
      * 就立即发送一个报文段。这样做，就可以有效的提高网络的吞吐量】
      */
     socket_->setTcpNoDelay(on);
+}
+
+const char *TcpConnection::stateToString() const
+{
+    switch (state_)
+    {
+    case kDisconnected:
+        return "kDisconnected";
+    case kConnecting:
+        return "kConnecting";
+    case kConnected:
+        return "kConnected";
+    case kDisconnecting:
+        return "kDisconnecting";
+    default:
+        return "unknown state";
+    }
 }

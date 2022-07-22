@@ -1,9 +1,8 @@
 #include "mymuduo/base/Thread.h"
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/base/Timestamp.h"
 #include "mymuduo/base/Exception.h"
 #include "mymuduo/base/CurrentThread.h"
-
-// #include <muduo/base/Logging.h>
 
 #include <errno.h>
 #include <stdio.h>
@@ -213,8 +212,7 @@ namespace mymuduo
         {
             started_ = false;
             delete data; // or no delete?
-            // LOG_SYSFATAL << "Failed in pthread_create";
-            perror("Failed in pthread_create\n");
+            LOG_SYSFATAL << "Failed in pthread_create";
         }
         else
         {
