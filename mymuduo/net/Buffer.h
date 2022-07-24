@@ -69,19 +69,14 @@ namespace mymuduo
                 return buffer_.size() - writerIndex_;
             }
 
-            size_t prependableBytes() const
-            {
-                return readerIndex_;
-            }
+            size_t prependableBytes() const { return readerIndex_; }
 
-            const char *peek() const
-            {
-                return begin() + readerIndex_;
-            }
+            // 返回第一个可读指针
+            const char *peek() const { return begin() + readerIndex_; }
 
-            /**
+            /** 主要用于 HTTP 数据解析
              * CRLF是Carriage-Return Line-Feed的缩写，意思是回车换行，
-             * 就是回车(CR, ASCII 13, \r) 换行(LF, ASCII 10, \n)
+             * 就是回车(CR, ASCII 13, \\r) 换行(LF, ASCII 10, \\n)
              */
             const char *findCRLF() const
             {
@@ -141,25 +136,10 @@ namespace mymuduo
                 retrieve(end - peek());
             }
 
-            void retrieveInt64()
-            {
-                retrieve(sizeof(int64_t));
-            }
-
-            void retrieveInt32()
-            {
-                retrieve(sizeof(int32_t));
-            }
-
-            void retrieveInt16()
-            {
-                retrieve(sizeof(int16_t));
-            }
-
-            void retrieveInt8()
-            {
-                retrieve(sizeof(int8_t));
-            }
+            void retrieveInt64() { retrieve(sizeof(int64_t)); }
+            void retrieveInt32() { retrieve(sizeof(int32_t)); }
+            void retrieveInt16() { retrieve(sizeof(int16_t)); }
+            void retrieveInt8() { retrieve(sizeof(int8_t)); }
 
             void retrieveAll()
             {

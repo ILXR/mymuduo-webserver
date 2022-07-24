@@ -238,7 +238,34 @@ void TcpConnection::send(const std::string &message)
     }
 }
 
+// FIXME efficiency!!!
+void TcpConnection::send(Buffer *buf)
+{
+    if (state_ == kConnected)
+    {
+        if (loop_->isInLoopThread())
+        {
+            sendInLoop(buf->peek(), buf->readableBytes());
+            buf->retrieveAll();
+        }
+        else
+        {
+            void (TcpConnection::*fp)(const StringPiece &message) = &TcpConnection::sendInLoop;
+            loop_->runInLoop(
+                std::bind(fp,
+                          this, // FIXME
+                          buf->retrieveAllAsString()));
+            // std::forward<string>(message)));
+        }
+    }
+}
+
 void TcpConnection::sendInLoop(const std::string &message)
+{
+    sendInLoop(message.data(), message.size());
+}
+
+void TcpConnection::sendInLoop(const StringPiece &message)
 {
     sendInLoop(message.data(), message.size());
 }

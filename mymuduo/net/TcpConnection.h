@@ -9,12 +9,14 @@
 #include "mymuduo/base/Types.h"
 
 #include <boost/scoped_ptr.hpp>
+#include <boost/any.hpp>
 
 namespace mymuduo
 {
     namespace net
     {
         class Socket;
+        class Buffer;
         class Channel;
         class EventLoop;
 
@@ -47,9 +49,15 @@ namespace mymuduo
             }
             void setWriteCompleteCallback(const WriteCompleteCallback &cb) { writeCompleteCallback_ = cb; }
 
+            // context_ 目前主要用于存储 HttpContext
+            void setContext(const boost::any &context) { context_ = context; }
+            const boost::any &getContext() const { return context_; }
+            boost::any *getMutableContext() { return &context_; }
+
             void connectEstablished();
             void connectDestroyed();
             void send(const std::string &message);
+            void send(Buffer *buf);
             void shutdown();
             void setTcpNoDelay(bool on);
             void forceClose();
@@ -86,6 +94,7 @@ namespace mymuduo
             void handleError();
 
             void sendInLoop(const std::string &message);
+            void sendInLoop(const StringPiece &message);
             void sendInLoop(const char *data, const size_t len);
             void shutdownInLoop();
 
@@ -122,6 +131,8 @@ namespace mymuduo
              * 上下两个水龙头要轮流开合，类似PWM
              */
             HighWaterMarkCallback highWaterMarkCallback_;
+
+            boost::any context_;
         };
     }
 }

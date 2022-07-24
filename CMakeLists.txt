@@ -85,3 +85,4 @@ message("PROJECT_SOURCE_DIR : ${PROJECT_SOURCE_DIR}")
 
 add_subdirectory(mymuduo/base)
 add_subdirectory(mymuduo/net)
+add_subdirectory(mymuduo/http)
