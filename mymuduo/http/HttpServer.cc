@@ -55,7 +55,7 @@ void HttpServer::onMessage(const TcpConnectionPtr &conn,
                            Buffer *buf,
                            Timestamp receiveTime)
 {
-    LOG_DEBUG << "HTTP message\n"
+    LOG_TRACE << "HTTP message\n"
               << buf->toStringPiece();
     HttpContext *context = boost::any_cast<HttpContext>(conn->getMutableContext());
 

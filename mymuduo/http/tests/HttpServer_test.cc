@@ -25,7 +25,7 @@ void onRequest(const HttpRequest &req, HttpResponse *resp)
         }
     }
 
-    if (req.path() == "/")
+    if (req.path() == "/" || req.path() == "")
     {
         resp->setStatusCode(HttpResponse::k200Ok);
         resp->setStatusMessage("OK");

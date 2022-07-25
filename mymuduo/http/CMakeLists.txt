@@ -2,6 +2,7 @@ set(http_SRCS
     HttpServer.cc
     HttpResponse.cc
     HttpContext.cc
+    FileServer.cc
 )
 
 add_library(mymuduo_http ${http_SRCS})
@@ -13,12 +14,15 @@ set(HEADERS
     HttpRequest.h
     HttpResponse.h
     HttpServer.h
+    FileServer.h
 )
 install(FILES ${HEADERS} DESTINATION include/mymuduo/http)
 
 if(MYMUDUO_BUILD_EXAMPLES)
     add_executable(httpserver_test tests/HttpServer_test.cc)
     target_link_libraries(httpserver_test mymuduo_http)
+    add_executable(fileserver_test tests/FileServer_test.cc)
+    target_link_libraries(fileserver_test mymuduo_http)
 
     # if(BOOSTTEST_LIBRARY)
     # add_executable(httprequest_unittest tests/HttpRequest_unittest.cc)
