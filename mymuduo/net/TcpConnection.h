@@ -58,6 +58,7 @@ namespace mymuduo
             void connectDestroyed();
             void send(const std::string &message);
             void send(Buffer *buf);
+            long sendfile(int fd, size_t count);
             void shutdown();
             void setTcpNoDelay(bool on);
             void forceClose();

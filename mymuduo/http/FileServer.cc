@@ -6,7 +6,10 @@
 #include "mymuduo/http/HttpResponse.h"
 
 #include <sys/stat.h>
+#include <cmath>
+#include <sstream>
 #include <dirent.h>
+#include <fcntl.h>
 #include <vector>
 
 using namespace mymuduo;
@@ -18,7 +21,26 @@ namespace mymuduo
     {
         namespace detail
         {
-            void setFileList(const string &path, string &list)
+            string get404Html(string &msg)
+            {
+                return R"(<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
+        <title>Error response</title>
+    </head>
+    <body>
+        <h1>Error response</h1>
+        <p>Error code: 404</p>
+        <p>Message:)" + msg +
+                       R"(</p>
+        <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
+    </body>
+</html>
+)";
+            }
+
+            void scanDir(const string &path, string &list)
             {
                 // <li><a href="branches/">branches/</a></li>
                 struct stat buffer;
@@ -55,60 +77,6 @@ namespace mymuduo
                 }
                 closedir(dir);
             }
-
-            void setResponseBody(HttpResponse &res, const string &path)
-            {
-                struct stat buffer;
-                if (stat(path.c_str(), &buffer) == 0)
-                {
-                    if (S_ISDIR(buffer.st_mode))
-                    { // 目录
-                        string list, html, show_path = path.substr(1);
-                        setFileList(path, list);
-                        html = R"(<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-<head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<title>Directory listing for )" +
-                               show_path +
-                               R"(</title>
-</head>
-<body>
-<h1>Directory listing for )" +
-                               show_path +
-                               R"(</h1>
-<hr>
-<ul>)" +
-                               "\n" + list +
-                               R"(</ul>
-<hr>
-</body>
-</html>)";
-                        res.setBody(html);
-                    }
-                    else if (S_ISREG(buffer.st_mode))
-                    { // 常规文件
-                      // TODO
-                    }
-                }
-                else // 路径不存在，返回 404
-                {
-                    res.setBody(R"(<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-    <head>
-        <meta http-equiv="Content-Type" content="text/html;charset=utf-8">
-        <title>Error response</title>
-    </head>
-    <body>
-        <h1>Error response</h1>
-        <p>Error code: 404</p>
-        <p>Message: File not found.</p>
-        <p>Error code explanation: HTTPStatus.NOT_FOUND - Nothing matches the given URI.</p>
-    </body>
-</html>
-)");
-                }
-            }
         }
     }
 }
@@ -118,26 +86,28 @@ std::map<std::string, std::string> MimeType::mime;
 
 void MimeType::init()
 {
-    mime[".html"] = "text/html";
+    mime[".html"] = "text/html;charset=utf-8";
     mime[".avi"] = "video/x-msvideo";
+    mime[".mp4"] = "video/mp4";
     mime[".bmp"] = "image/bmp";
     mime[".doc"] = "application/msword";
     mime[".gif"] = "image/gif";
     mime[".gz"] = "application/x-gzip";
-    mime[".htm"] = "text/html";
+    mime[".htm"] = "text/html;charset=utf-8";
     mime[".ico"] = "image/x-icon";
     mime[".jpg"] = "image/jpeg";
     mime[".png"] = "image/png";
-    mime[".txt"] = "text/plain";
+    mime[".txt"] = "text/plain;charset=utf-8";
     mime[".mp3"] = "audio/mp3";
-    mime[".cc"] = "text/plain";
-    mime[".hpp"] = "text/plain";
-    mime[".h"] = "text/plain";
-    mime[".cpp"] = "text/plain";
-    mime[".c"] = "text/plain";
-    mime[".sh"] = "text/plain";
-    mime[".py"] = "text/plain";
-    mime["default"] = "text/html";
+    mime[".cc"] = "text/plain;charset=utf-8";
+    mime[".hpp"] = "text/plain;charset=utf-8";
+    mime[".h"] = "text/plain;charset=utf-8";
+    mime[".cpp"] = "text/plain;charset=utf-8";
+    mime[".c"] = "text/plain;charset=utf-8";
+    mime[".sh"] = "text/plain;charset=utf-8";
+    mime[".py"] = "text/plain;charset=utf-8";
+    mime[".md"] = "text/plain;charset=utf-8";
+    mime["default"] = "text/html;charset=utf-8";
 }
 
 string MimeType::getMime(const std::string &suffix)
@@ -198,6 +168,10 @@ extern char favicon[555];
 void FileServer::onRequest(const TcpConnectionPtr &conn, const HttpRequest &req)
 {
     LOG_WARN << "Request : " << req.methodString() << " " << req.path();
+    if (req.getVersion() == HttpRequest::kHttp10)
+        LOG_WARN << "Http 1.0";
+    else
+        LOG_WARN << "Http 1.1";
     const string &connection = req.getHeader("Connection");
     bool close = connection == "close" ||
                  (req.getVersion() == HttpRequest::kHttp10 && connection != "Keep-Alive");
@@ -212,15 +186,153 @@ void FileServer::onRequest(const TcpConnectionPtr &conn, const HttpRequest &req)
         response.setBody(string(favicon, sizeof favicon));
     }
     else
-        detail::setResponseBody(response, workPath_ + req.path());
+        setResponseBody(req, response);
 
     Buffer buf;
     response.appendToBuffer(&buf);
     conn->send(&buf);
+    if (response.needSendFile())
+    {
+        // 需要发送文件
+        int fd = response.getFd();
+        long needLen = response.getSendLen();
+        while (needLen > 0)
+        {
+            long len = conn->sendfile(fd, needLen);
+            loff_t off = static_cast<loff_t>(len);
+            ::lseek(fd, off, SEEK_CUR);
+            LOG_INFO << "Send File len=" << len;
+            if (len < 0)
+            {
+                perror("send file error");
+                LOG_ERROR << "Send File Error: len==" << len;
+                response.setCloseConnection(true);
+                break;
+            }
+            needLen -= len;
+        }
+    }
 
     if (response.closeConnection())
     {
         conn->shutdown();
+    }
+}
+
+void FileServer::setResponseBody(const HttpRequest &req, HttpResponse &res)
+{
+    static const off64_t maxSendLen = 1024 * 1024 * 100;
+    string path = workPath_ + req.path();
+    struct stat buffer;
+    if (stat(path.c_str(), &buffer) == 0)
+    {
+        if (S_ISDIR(buffer.st_mode))
+        { // 目录
+            string list, html, show_path = path[0] == '.' ? path.substr(1) : path;
+            detail::scanDir(path, list);
+            html = R"(<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Directory listing for )" +
+                   show_path +
+                   R"(</title>
+</head>
+<body>
+<h1>Directory listing for )" +
+                   show_path +
+                   R"(</h1>
+<hr>
+<ul>)" +
+                   "\n" + list +
+                   R"(</ul>
+<hr>
+</body>
+</html>)";
+            res.setStatusCode(HttpResponse::k200Ok);
+            res.setContentType("text/html;charset=utf-8");
+            res.setBody(html);
+        }
+        else if (S_ISREG(buffer.st_mode))
+        { // 常规文件
+            int fd = ::open(path.c_str(), O_RDONLY);
+            off64_t len = lseek(fd, 0, SEEK_END) - lseek(fd, 0, SEEK_SET);
+            res.setFd(fd);
+
+            string suffix;
+            size_t pos = req.path().find_last_of('.');
+            if (pos != req.path().npos)
+                suffix = req.path().substr(pos);
+            else
+                suffix = "";
+            LOG_DEBUG << "File suffix: " << suffix;
+            string type = MimeType::getMime(suffix);
+            res.setContentType(type);
+            res.addHeader("Accept-Ranges", "bytes");
+
+            string range = req.getHeader("Range");
+            if (range != "")
+            {
+                res.setStatusCode(HttpResponse::k206Partitial);
+                res.setStatusMessage("Partial Content");
+
+                off64_t beg_num = 0, end_num = 0;
+                string range_value = req.getHeader("Range").substr(6);
+                pos = range_value.find("-");
+                string beg = range_value.substr(0, pos);
+                string end = range_value.substr(pos + 1);
+                if (beg != "" && end != "")
+                {
+                    beg_num = stoi(beg);
+                    end_num = stoi(end);
+                }
+                else if (beg != "" && end == "")
+                {
+                    beg_num = stoi(beg);
+                    end_num = len - 1;
+                }
+                else if (beg == "" && end != "")
+                {
+                    beg_num = len - stoi(end);
+                    end_num = len - 1;
+                }
+
+                // 需要读need_len个字节
+                off64_t need_len = std::min(end_num - beg_num + 1, maxSendLen);
+                end_num = beg_num + need_len - 1;
+                lseek(fd, beg_num, SEEK_SET);
+                res.setSendLen(static_cast<int>(need_len));
+                LOG_INFO << "need len " << need_len;
+
+                std::ostringstream os_range;
+                os_range << "bytes " << beg_num << "-" << end_num << "/" << need_len;
+                res.addHeader("Content-Range", os_range.str());
+                res.addHeader("Content-Length", std::to_string(need_len));
+                LOG_INFO << os_range.str();
+            }
+            else
+            {
+                res.setStatusCode(HttpResponse::k200Ok);
+                res.setStatusMessage("OK");
+                res.setSendLen(len);
+                res.addHeader("Content-Length", std::to_string(len));
+            }
+        }
+        else
+        {
+            // 非常规文件
+            res.setStatusCode(HttpResponse::k404NotFound);
+            res.setContentType("text/html;charset=utf-8");
+            string msg = "This is not a regular file.";
+            res.setBody(detail::get404Html(msg));
+        }
+    }
+    else // 路径不存在，返回 404
+    {
+        res.setStatusCode(HttpResponse::k404NotFound);
+        res.setContentType("text/html;charset=utf-8");
+        string msg = "File not found.";
+        res.setBody(detail::get404Html(msg));
     }
 }
 

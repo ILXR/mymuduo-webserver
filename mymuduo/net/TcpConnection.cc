@@ -6,6 +6,8 @@
 #include "mymuduo/net/Channel.h"
 #include "mymuduo/net/Socket.h"
 
+#include <sys/sendfile.h>
+
 using namespace mymuduo;
 using namespace mymuduo::net;
 
@@ -49,6 +51,11 @@ TcpConnection::~TcpConnection()
               << " fd=" << channel_->fd()
               << " state=" << stateToString();
     assert(state_ == kDisconnected);
+}
+
+long TcpConnection::sendfile(int fd, size_t count)
+{
+    return ::sendfile(socket_->fd(), fd, nullptr, count);
 }
 
 void TcpConnection::handleRead(Timestamp receiveTime)

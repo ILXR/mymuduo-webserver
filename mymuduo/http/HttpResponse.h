@@ -28,6 +28,7 @@ namespace mymuduo
                 kUnknown,
                 k200Ok = 200,
                 k204NoContent = 204,
+                k206Partitial = 206,
                 k301MovedPermanently = 301,
                 k400BadRequest = 400,
                 k404NotFound = 404,
@@ -35,7 +36,9 @@ namespace mymuduo
             };
 
             explicit HttpResponse(bool close) : statusCode_(kUnknown),
-                                                closeConnection_(close) {}
+                                                closeConnection_(close),
+                                                fd_(-1), len_(0) {}
+            ~HttpResponse();
 
             void setStatusCode(HttpStatusCode code) { statusCode_ = code; }
             void setStatusMessage(const string &message) { statusMessage_ = message; }
@@ -47,12 +50,28 @@ namespace mymuduo
             void setBody(const string &body) { body_ = body; }
             void appendToBuffer(Buffer *output) const;
 
+            bool needSendFile() const { return fd_ != -1; }
+            int getFd() const { return fd_; }
+            void setFd(int fd)
+            {
+                // assert(fd >= 0);
+                fd_ = fd;
+            }
+            off64_t getSendLen() const { return len_; }
+            void setSendLen(off64_t len)
+            {
+                // assert(len > 0);
+                len_ = len;
+            }
+
         private:
             std::map<string, string> headers_; // 首部字段
             HttpStatusCode statusCode_;        // 状态码
             string statusMessage_;             // 状态短语
             bool closeConnection_;             // 是否关闭长连接
             string body_;                      // 实体主体
+            int fd_;                           // 需要传输文件时使用
+            off64_t len_;                          // 传输大小
         };
     }
 }

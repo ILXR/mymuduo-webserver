@@ -1,10 +1,19 @@
 #include "mymuduo/http/HttpResponse.h"
+
+#include "mymuduo/base/Logging.h"
 #include "mymuduo/net/Buffer.h"
 
 #include <stdio.h>
 
 using namespace mymuduo;
 using namespace mymuduo::net;
+
+HttpResponse::~HttpResponse()
+{
+    if (fd_ >= 0)
+        if (::close(fd_) != 0)
+            LOG_ERROR << "Close fd " << fd_ << " error!";
+}
 
 void HttpResponse::appendToBuffer(Buffer *output) const
 {
@@ -23,7 +32,8 @@ void HttpResponse::appendToBuffer(Buffer *output) const
     else
     {
         // 格式符z和整数转换说明符一起使用，表示对应数字是一个size_t值。属于C99。
-        snprintf(buf, sizeof buf, "Content-Length: %zd\r\n", body_.size());
+        if (!needSendFile())
+            snprintf(buf, sizeof buf, "Content-Length: %zd\r\n", body_.size());
         output->append(buf);
         // HTTP/1.1 之前的 HTTP 版本的默认连接都是非持久连接。为了兼容老版本，
         // 则需要指定 Connection 首部字段的值为 Keep-Alive

@@ -51,6 +51,7 @@ namespace mymuduo
                            Timestamp receiveTime);
             void onRequest(const TcpConnectionPtr &, const HttpRequest &);
             void onConnection(const TcpConnectionPtr &conn);
+            void setResponseBody(const HttpRequest &, HttpResponse &);
 
             string workPath_;
             TcpServer server_;

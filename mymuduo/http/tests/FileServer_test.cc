@@ -15,7 +15,7 @@ int main(int argc, char *argv[])
         numThreads = atoi(argv[1]);
     }
     EventLoop loop;
-    FileServer server("/", &loop, InetAddress(8888), "FileServer");
+    FileServer server(".", &loop, InetAddress(8888), "FileServer");
     server.setThreadNum(numThreads);
     server.start();
     loop.loop();
