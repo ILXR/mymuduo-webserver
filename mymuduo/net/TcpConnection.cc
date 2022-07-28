@@ -30,6 +30,8 @@ TcpConnection::TcpConnection(EventLoop *loop, std::string &name,
       name_(name),
       state_(kConnecting),
       inputBuffer_(),
+      sendFd_(-1),
+      sendLen_(0),
       socket_(new Socket(sockfd)),
       channel_(new Channel(loop_, sockfd)),
       localAddr_(localAddr),
@@ -51,11 +53,6 @@ TcpConnection::~TcpConnection()
               << " fd=" << channel_->fd()
               << " state=" << stateToString();
     assert(state_ == kDisconnected);
-}
-
-long TcpConnection::sendfile(int fd, size_t count)
-{
-    return ::sendfile(socket_->fd(), fd, nullptr, count);
 }
 
 void TcpConnection::handleRead(Timestamp receiveTime)
@@ -99,35 +96,70 @@ void TcpConnection::handleRead(Timestamp receiveTime)
 void TcpConnection::handleWrite()
 {
     loop_->assertInLoopThread();
+    // 需要同时处理 sendBuffer 和 sendFile
+    // 由于在 http 连接流程中，sendFile 前可能有 buffer 数据还在 socket缓冲区
+    // 而发送 buffer 数据时，file 数据一定已经被对方接收了
+    // 所以优先处理 buffer 数据的发送
     if (channel_->isWriting())
     {
-        // 如果第一次write(2)没有能够发送完全部数据的话，第二次调用write(2)几乎肯定会返回EAGAIN。
-        // 在非阻塞模式下调用了阻塞操作，在该操作没有完成就返回这个错误，
-        // 这个错误不会破坏socket的同步，不用管它，下次循环接着recv就可以。对非阻塞socket而言，EAGAIN不是一种错误
-        // 因此muduo决定节省一次系统调用，这么做不影响程序的正确性，却能降低延迟
-        ssize_t n = ::write(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
-        if (n > 0)
+        if (outputBuffer_.readableBytes())
         {
-            outputBuffer_.retrieve(n);
-            if (outputBuffer_.readableBytes() == 0)
+            // 如果第一次write(2)没有能够发送完全部数据的话，第二次调用write(2)几乎肯定会返回EAGAIN。
+            // 在非阻塞模式下调用了阻塞操作，在该操作没有完成就返回这个错误，
+            // 这个错误不会破坏socket的同步，不用管它，下次循环接着recv就可以。对非阻塞socket而言，EAGAIN不是一种错误
+            // 因此muduo决定节省一次系统调用，这么做不影响程序的正确性，却能降低延迟
+            ssize_t n = ::write(channel_->fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
+            if (n > 0)
             {
-                // 一旦发送完毕，立刻停止观察writable事件，避免busy loop
-                channel_->disableWriting();
-                if (writeCompleteCallback_)
+                outputBuffer_.retrieve(n);
+                if (outputBuffer_.readableBytes() == 0 && sendLen_ == 0)
                 {
-                    loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+                    // 一旦发送完毕，立刻停止观察writable事件，避免busy loop
+                    channel_->disableWriting();
+                    if (writeCompleteCallback_)
+                    {
+                        loop_->queueInLoop(std::bind(writeCompleteCallback_, shared_from_this()));
+                    }
+                    // 该状态表示连接需要关闭，但是还未写完数据，因此写端在此关闭
+                    if (state_ == kDisconnecting)
+                    {
+                        shutdownInLoop();
+                    }
                 }
-                // 该状态表示连接需要关闭，但是还未写完数据，因此写端在此关闭
-                if (state_ == kDisconnecting)
-                {
-                    shutdownInLoop();
-                }
+            }
+            else
+            {
+                // 一旦发生错误，handleRead()会读到0字节，继而关闭连接
+                LOG_SYSERR << "TcpConnection::handleWrite";
             }
         }
         else
         {
-            // 一旦发生错误，handleRead()会读到0字节，继而关闭连接
-            LOG_SYSERR << "TcpConnection::handleWrite";
+            ssize_t n = ::sendfile(socket_->fd(), sendFd_, NULL, sendLen_);
+            if (n > 0)
+            {
+                sendLen_ -= n;
+                if (sendLen_ == 0)
+                {
+                    channel_->disableWriting();
+                    ::close(sendFd_);
+                    sendFd_ = -1;
+                    if (state_ == kDisconnecting)
+                    {
+                        shutdownInLoop();
+                    }
+                }
+            }
+            else
+            {
+
+                LOG_SYSERR << "TcpConnection::handleWrite send file len = "
+                           << n << " remain len = " << sendLen_;
+                ::close(sendFd_);
+                sendFd_ = -1;
+                sendLen_ = 0;
+                channel_->disableWriting();
+            }
         }
     }
     else
@@ -226,6 +258,62 @@ void TcpConnection::forceCloseInLoop()
     {
         // as if we received 0 byte in handleRead();
         handleClose();
+    }
+}
+
+void TcpConnection::sendFile(const int fd, const size_t count)
+{
+    if (state_ == kConnected)
+    {
+        this->sendFd_ = fd;
+        this->sendLen_ = count;
+        if (loop_->isInLoopThread())
+            sendFileInLoop();
+        else
+            loop_->runInLoop(std::bind(&TcpConnection::sendFileInLoop, this));
+    }
+}
+
+void TcpConnection::sendFileInLoop()
+{
+    loop_->assertInLoopThread();
+    ssize_t nwrote = 0;
+    bool faultError = false;
+    if (state_ == kDisconnected)
+    {
+        LOG_WARN << "disconnected, give up sending file";
+        return;
+    }
+    if (!channel_->isWriting() && outputBuffer_.readableBytes() == 0)
+    {
+        // 没有在发缓冲区数据/文件数据时才可以发送
+        nwrote = ::sendfile(socket_->fd(), sendFd_, nullptr, sendLen_);
+        if (nwrote >= 0)
+        {
+            sendLen_ -= nwrote;
+            if (sendLen_ == 0)
+                ::close(sendFd_);
+        }
+        else
+        {
+            nwrote = 0;
+            if (errno != EWOULDBLOCK)
+            {
+                LOG_SYSERR << "TcpConnection::sendFileInLoop";
+                if (errno == EPIPE || errno == ECONNRESET) // FIXME: any others?
+                {
+                    faultError = true;
+                }
+            }
+        }
+    }
+    if (!faultError && sendLen_ > 0)
+    {
+        if (!channel_->isWriting())
+        {
+            // 监听可写事件
+            channel_->enableWriting();
+        }
     }
 }
 

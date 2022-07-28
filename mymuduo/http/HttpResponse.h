@@ -38,7 +38,6 @@ namespace mymuduo
             explicit HttpResponse(bool close) : statusCode_(kUnknown),
                                                 closeConnection_(close),
                                                 fd_(-1), len_(0) {}
-            ~HttpResponse();
 
             void setStatusCode(HttpStatusCode code) { statusCode_ = code; }
             void setStatusMessage(const string &message) { statusMessage_ = message; }

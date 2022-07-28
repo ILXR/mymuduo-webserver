@@ -8,13 +8,6 @@
 using namespace mymuduo;
 using namespace mymuduo::net;
 
-HttpResponse::~HttpResponse()
-{
-    if (fd_ >= 0)
-        if (::close(fd_) != 0)
-            LOG_ERROR << "Close fd " << fd_ << " error!";
-}
-
 void HttpResponse::appendToBuffer(Buffer *output) const
 {
     char buf[32];

@@ -87,7 +87,8 @@ std::map<std::string, std::string> MimeType::mime;
 void MimeType::init()
 {
     mime[".html"] = "text/html;charset=utf-8";
-    mime[".avi"] = "video/x-msvideo";
+    mime[".avi"] = "video/avi";
+    mime[".flv"] = "video/flv";
     mime[".mp4"] = "video/mp4";
     mime[".bmp"] = "image/bmp";
     mime[".doc"] = "application/msword";
@@ -195,22 +196,8 @@ void FileServer::onRequest(const TcpConnectionPtr &conn, const HttpRequest &req)
     {
         // 需要发送文件
         int fd = response.getFd();
-        long needLen = response.getSendLen();
-        while (needLen > 0)
-        {
-            long len = conn->sendfile(fd, needLen);
-            loff_t off = static_cast<loff_t>(len);
-            ::lseek(fd, off, SEEK_CUR);
-            LOG_INFO << "Send File len=" << len;
-            if (len < 0)
-            {
-                perror("send file error");
-                LOG_ERROR << "Send File Error: len==" << len;
-                response.setCloseConnection(true);
-                break;
-            }
-            needLen -= len;
-        }
+        size_t needLen = static_cast<size_t>(response.getSendLen());
+        conn->sendFile(fd, needLen);
     }
 
     if (response.closeConnection())
@@ -221,7 +208,7 @@ void FileServer::onRequest(const TcpConnectionPtr &conn, const HttpRequest &req)
 
 void FileServer::setResponseBody(const HttpRequest &req, HttpResponse &res)
 {
-    static const off64_t maxSendLen = 1024 * 1024 * 100;
+    // static const off64_t maxSendLen = 1024 * 1024 * 100;
     string path = workPath_ + req.path();
     struct stat buffer;
     if (stat(path.c_str(), &buffer) == 0)
@@ -256,7 +243,8 @@ void FileServer::setResponseBody(const HttpRequest &req, HttpResponse &res)
         else if (S_ISREG(buffer.st_mode))
         { // 常规文件
             int fd = ::open(path.c_str(), O_RDONLY);
-            off64_t len = lseek(fd, 0, SEEK_END) - lseek(fd, 0, SEEK_SET);
+            // off64_t len = lseek(fd, 0, SEEK_END) - lseek(fd, 0, SEEK_SET);
+            off64_t len = buffer.st_size;
             res.setFd(fd);
 
             string suffix;
@@ -298,14 +286,14 @@ void FileServer::setResponseBody(const HttpRequest &req, HttpResponse &res)
                 }
 
                 // 需要读need_len个字节
-                off64_t need_len = std::min(end_num - beg_num + 1, maxSendLen);
+                // off64_t need_len = std::min(end_num - beg_num + 1, maxSendLen);
+                off64_t need_len = end_num - beg_num + 1;
                 end_num = beg_num + need_len - 1;
                 lseek(fd, beg_num, SEEK_SET);
                 res.setSendLen(static_cast<int>(need_len));
-                LOG_INFO << "need len " << need_len;
 
                 std::ostringstream os_range;
-                os_range << "bytes " << beg_num << "-" << end_num << "/" << need_len;
+                os_range << "bytes " << beg_num << "-" << end_num << "/" << len;
                 res.addHeader("Content-Range", os_range.str());
                 res.addHeader("Content-Length", std::to_string(need_len));
                 LOG_INFO << os_range.str();

@@ -58,7 +58,7 @@ namespace mymuduo
             void connectDestroyed();
             void send(const std::string &message);
             void send(Buffer *buf);
-            long sendfile(int fd, size_t count);
+            void sendFile(const int fd, const size_t count);
             void shutdown();
             void setTcpNoDelay(bool on);
             void forceClose();
@@ -97,6 +97,7 @@ namespace mymuduo
             void sendInLoop(const std::string &message);
             void sendInLoop(const StringPiece &message);
             void sendInLoop(const char *data, const size_t len);
+            void sendFileInLoop();
             void shutdownInLoop();
 
             EventLoop *loop_;
@@ -105,6 +106,9 @@ namespace mymuduo
 
             Buffer inputBuffer_;
             Buffer outputBuffer_;
+
+            int sendFd_;     // sendFile 保存在本地的 fd
+            size_t sendLen_; // 当前需要发送的数据长度
 
             // TcpConnection拥有TCP socket，它 的析构函数会close(fd)（在Socket的析构函数中发生）
             boost::scoped_ptr<Socket> socket_;
