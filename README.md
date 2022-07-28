@@ -1,11 +1,23 @@
-# mymuduo - FileServer
+# mymuduo - WebServer
 
-> **一个参考 muduo 设计思路所实现的 C++ 网络库以及 文件服务器**
+> **一个参考 muduo 设计思路所实现的 C++ 网络库以及在此基础上实现的 Http/File Server**
 
 ## Introduction
 
 根据 《Linux多线程服务端编程 使用muduo C++网络库》 by 陈硕 这本书的第8章：*"muduo 网络库的设计与实现"* 所讲述的设计思想，结合对源码的理解，从头开始实现的基于 Reactor 的网络编程库，基本上每个文件都进行了较详细的注释。
 同时，在实现 HTTP 1.1 协议的基础上，参考 Python3 http.server 文件服务器实现了一个 [FileServer](mymuduo/http/FileServer.h)，可以浏览目录内容、查看文本或图片、传输大文件、在线浏览视频（可以拖动进度条）
+
+|Language|files|blank|comment|code|
+|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+|C++|49|800|927|6802|
+|JSON|21|0|0|4326|
+|C/C++ Header|50|721|980|2814|
+|make|6|832|508|1636|
+|CMake|80|235|304|1322|
+|C|1|114|50|507|
+|Markdown|2|125|0|235|
+|Bourne Shell|2|6|18|27|
+|SUM:|211|2833|2787|17669|
 
 ## Traits
 
