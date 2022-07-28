@@ -32,6 +32,7 @@
 ## 线程/线程池
 
 ![Thread&ThreadPool](src/img/Thread&ThreadPool.png)
+
 线程池为避免频繁创建、销毁线程，提供一组子线程，能从工作队列取任务、执行任务，而用户可以向工作队列加入任务，从而完成用户任务，主要文件包括（不同于 EventLoopThread）：
 
 - [Thread](mymuduo/base/Thread.h)
@@ -50,6 +51,7 @@
 ### 设计
 
 ![LogDesign](src/img/LogDesign.png)
+
 采用双缓冲区（double buffering）交互技术。基本思想是准备2部分buffer：A和B，前端（front end）线程往buffer A填入数据（日志消息），后端（back end）线程负责将buffer B写入日志文件。当A写满时，交换A和B。
 
 - AsyncLogging 类主要功能就是提供后端线程，定时将日志缓冲写到磁盘，维护缓冲及缓冲队列；
@@ -71,9 +73,13 @@
 muduo没有用到标准库的iostream，而是自己写的LogStream类，这主要是出于性能。
 设计这个LogStream类，让它如同C++的标准输出流对象cout，能用<<符号接收输入，cout是输出到终端，而LogStream类是把输出保存自己内部的缓冲区，可以让外部程序把缓冲区的内容重定向输出到不同的目标，如文件、终端、socket等。
 LogStream类本本身不是线程安全的，正确使用方式是每个log消息构造一个LogStream，用完就扔。由于其成本极低，这么做是没有什么性能损失的。
+
 ![LogStream](src/img/LogStream.png)
+
 其中，成员变量Buffer是FixedBuffer<>模板类的实例化对象，过成员 data_首地址、cur_指针、end()完成对缓冲区的各项操作。通过.append()接口把日志内容添加到缓冲区来：
+
 ![LogStreamBuffer](src/img/LogStreamBuffer.png)
+
 FixedBuffer维护一块栈上长度为SIZE的内存区域，写入length()长度的后，剩余avail()空间。 指针curr_指向下一次.append()可写入数据的位置。
 
 ### AsyncLogging
@@ -93,6 +99,7 @@ EventLoop 持有 poller，这通过 scope_ptr 来实现不可转让，也就是�
 EventLoop 直接持有 Channel*，Poller 中只存储了 fd 和 Channel* 的对应关系，因此当需要删除一个 Channel时，通过 EventLoop 删除，并在 Poller中取消注册。
 
 EventLoop 在loop中会通过 Poller 的函数来间接调用 poll 和 epoll，当poller检测到事件，对于poll和epoll分别进行不同的处理，比如说对于epoll，通过epoll_wait 来讲，他会获取所有的活动事件，然后填充到调用方传入的 activeChannels，这样就可以在 loop 中对每个 Channel遍历其 revents 并调用对应的回调函数，这通过调用 Channel->handleEvent 来处理。
+
 ![EventLoop](src/img/EventLoop.png)
 
 除此之外，EventLoop 中还维护了一个 wakeupfd，用于由其他线程来调用该 EventLoop->quit，如果此时正在挂起并等待io时间，就直接在 wakeupfd上写入数据，这时就会触发 poller 进行处理，也就达到了唤醒该线程的作用。
@@ -124,6 +131,7 @@ EventLoop 中主要提供了几个延时和重复执行的接口给用户，定�
 TimerQueue 中只维护了一个 timerfd，也就是说每次超时、添加新定时器、删除定时器都需要重新获取下一次最近的过期时间，然后使用 timerfd_settime 进行设置。每次过期后会处理所有的过期定时器。
 
 TimerQueue 中包含了一个 timerfdChannel_，它注册到了TimerQueue 所在的EventLoop，并被该loop中的poller所监听。当超时触发时，就会回调调用 TimerQueue->handleread
+
 ![Timer](src/img/Timer.png)
 
 ### EventLoopThread
@@ -162,6 +170,7 @@ TcpServer 是 muduo内部唯一存储了 TcpConnection（见下文）指针的�
 ### TcpConnection
 
 TcpConnection 用来管理一个 socket连接的各种操作，它提供了 连接回调、写完成回调（缓冲区发送完毕）、读回调、关闭回调、缓冲区高水位回调（写的太快，填满了缓冲区）：
+
 ![TcpStatus](src/img/TcpStatus.png)
 
 TcpConnection 在写数据时，当写入缓冲区不为空时说明有数据可写，一直开启观察 writeable 事件。当数据写完时需要立刻关闭监听该事件，因为使用 level触发，即使用户没有数据需要发送，该事件也会一直触发，陷入 busy loop。
@@ -183,6 +192,7 @@ Channel 中会通过 tie() 来保存 TcpConnection的弱引用：
 ### Buffer
 
 Buffer 被用于 TcpConnection 中的 读/写 操作。它将一个 vector\<char\> 分为三个区域：
+
 ![Buffer](src/img/Buffer.png)
 
 - prependable 用于用户在接收完数据之后，可能会加上几个字节的头部信息，这时就可以直接在预留出的区域添加；
@@ -285,4 +295,3 @@ C/C++发展的过程中，二进制兼容一直是个问题。不同编译器厂
 
 - 每个方法都是以_Z开头，对于嵌套的名字（比如名字空间中的名字或者是类中间的名字,比如Class::Func）后面紧跟N ， 然后是各个名字空间和类的名字，每个名字前是名字字符的长度，再以E结尾。(如果不是嵌套名字则不需要以E结尾)。
 - 比如对于 _Z3foov 就是函数 foo(), v 表示参数类型为void。又如 N:C:Func 经过修饰后就是 _ZN1N1C4FuncE，这个函数名后面跟参数类型。 如果跟一个整型，那就是_ZN1N1C4FuncEi。
-
